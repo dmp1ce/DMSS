@@ -1,0 +1,3 @@
+[submodule "g-gpgme"]
+	path = h-gpgme
+	url = https://github.com/rethab/h-gpgme.git
