@@ -19,27 +19,30 @@ import Options.Applicative
 
 data Cli = Cli
   { optCommand :: Command }
-  
 
-data Command = Id IdOptions
+data Command = Id | Version -- IdOptions
 
-data IdOptions = IdOptions
+--data IdOptions = IdOptions
 --  { test :: Bool }
 
-idOptions :: Parser IdOptions
-idOptions = pure IdOptions
+--idOptions :: Parser IdOptions
+--idOptions = pure IdOptions
 --  <$> switch
 --      ( long "test"
 --     <> help "just for testing" )
 
-sample :: Parser Command
-sample = Id
+sample :: Parser Cli
+sample = Cli
   <$> subparser
-      ( command "id" (info idOptions
-        ( progDesc "Manage IDs" )))
+      ( command "id" (info (pure Id)
+        ( progDesc "Manage IDs" ))
+     <> command "version" (info (pure Version)
+        ( progDesc "Version info here"))
+      )
 
-greet :: Command -> IO ()
-greet (Id IdOptions) = putStrLn "Manage ID command go" -- ++ " " ++ (show b)
+greet :: Cli -> IO ()
+greet (Cli Id) = putStrLn "Manage ID command" -- ++ " " ++ (show b)
+greet (Cli Version) = putStrLn $ "Cli version: " ++ cliVersion
 --greet _ = return ()
 
 cliMain :: IO ()
