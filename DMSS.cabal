@@ -29,6 +29,7 @@ library
   hs-source-dirs:    src
   exposed-modules:   DMSS.Daemon
                    , DMSS.CLI
+                   , DMSS.Command
                    , Lib
   build-depends:     base >= 4.8 && < 5
                    , daemons
@@ -36,6 +37,7 @@ library
                    , h-gpgme
                    , turtle
                    , optparse-applicative
+                   , cereal
 
 executable dmss-cli
   default-language:  Haskell2010

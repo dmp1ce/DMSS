@@ -12,33 +12,36 @@
 {-# LANGUAGE OverloadedStrings #-}
 module DMSS.Daemon where
 
+import DMSS.Command
+
 --import Data.Default (def)
 import System.Daemon
 import Control.Pipe.C3 ( commandReceiver )
 import Control.Concurrent ( forkIO, threadDelay )
---import Control.Monad ( forever )
 
 import Crypto.Gpgme
 import Turtle
 
-checkerDaemon :: String -> IO String 
-checkerDaemon str = do
-  -- Start event loop if not started already
-  _ <- forkIO $ forever $ do
-    let ms = 1000
-    threadDelay (ms * 1000)
-    putStrLn $ "In event loop"
-  putStrLn $ "Received request: " ++ str
-  return str
+type Response = String
+
+checkerDaemon :: Command -> IO Response
+checkerDaemon Id = do
+  putStrLn $ "Receive Id command"
+  return "Thanks for the Id command. Not currently doing anything about it though"
+checkerDaemon Version = return $ "Daemon version: " ++ daemonVersion
 
 daemonMain :: IO ()
 daemonMain = do
-  -- Start Daemon shortly after it starts
-  _ <- forkIO $ do
-    let ms = 1000
-    threadDelay (ms * 1000)
-    res <- runClient ("localhost"::String) 5000 ("Start Please"::String)
-    print (res :: Maybe String)
+  -- Start event loop
+  putStr $ "Starting event loop..."
+  _ <- forkIO $ forever $ do
+    let ms = 10000
+        num_ms = 1000
+    threadDelay (ms * num_ms)
+    putStrLn $ "heartbeat"
+  putStrLn $ "Done"
+
+  -- Start daemon process
   runInForeground 5000 (commandReceiver checkerDaemon)
 
 -- GPG ID
