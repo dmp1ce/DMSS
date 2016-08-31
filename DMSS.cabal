@@ -1,17 +1,16 @@
 name:                DMSS
 version:             0.1.0.0
-synopsis:            Initial project template from stack
-description:         Please see README.md
+synopsis:            Dead Man Switch System
+description:         Trigger payloads if switch owner does or doesn't check in
 
-license:             ISC
+license:             PublicDomain
 license-file:        LICENSE
-author:              TODO:<Author name here>
-maintainer:          TODO:<example@example.com>
-copyright:           © 2016 TODO:<Author name here>
-homepage:            https://github.com/TODO:<githubuser>/DMSS
-bug-reports:         https://github.com/TODO:<githubuser>/DMSS/issues
+author:              David Parrish
+maintainer:          daveparrish@tutanota.com
+homepage:            https://github.com/dmp1ce/DMSS
+bug-reports:         https://github.com/dmp1ce/DMSS/issues
 
-category:            Test
+category:            Unknown
 build-type:          Simple
 stability:           alpha (experimental)
 cabal-version:       >=1.10
@@ -22,17 +21,21 @@ extra-source-files:
 
 source-repository head
   type:     git
-  location: https://github.com/TODO:<githubuser>/DMSS
+  location: https://github.com/dmp1ce/DMSS
 
 library
   default-language:  Haskell2010
   ghc-options:       -Wall -Werror -O2
   hs-source-dirs:    src
-  exposed-modules:   Lib
-                   , DMSS.Daemon
+  exposed-modules:   DMSS.Daemon
+                   , DMSS.CLI
+                   , Lib
   build-depends:     base >= 4.8 && < 5
                    , daemons
                    , data-default
+                   , h-gpgme
+                   , turtle
+                   , optparse-applicative
 
 executable dmss-cli
   default-language:  Haskell2010

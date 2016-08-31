@@ -1,4 +1,4 @@
-import DMSS.Daemon
+import DMSS.CLI
 
 main :: IO ()
 main = cliMain
