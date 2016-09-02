@@ -38,6 +38,7 @@ library
                    , turtle
                    , optparse-applicative
                    , cereal
+                   , ansi-wl-pprint
 
 executable dmss-cli
   default-language:  Haskell2010

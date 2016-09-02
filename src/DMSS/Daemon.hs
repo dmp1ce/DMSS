@@ -25,9 +25,12 @@ import Turtle
 type Response = String
 
 checkerDaemon :: Command -> IO Response
-checkerDaemon Id = do
-  putStrLn $ "Receive Id command"
-  return "Thanks for the Id command. Not currently doing anything about it though"
+checkerDaemon (Id IdCreate) = do
+  putStrLn $ "Receive Id Create command"
+  return "Thanks for the Id Create command. Not currently doing anything about it though"
+checkerDaemon (Id IdList) = do
+  putStrLn $ "Receive Id List command"
+  return "Thanks for the Id List command. Not currently doing anything about it though"
 checkerDaemon Version = return $ "Daemon version: " ++ daemonVersion
 
 daemonMain :: IO ()

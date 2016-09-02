@@ -15,7 +15,12 @@ module DMSS.Command where
 import Data.Serialize
 import GHC.Generics
 
--- IdOptions
-data Command = Id | Version deriving (Show, Generic)
-
+data Command = Id IdCommand | Version deriving (Show, Generic)
 instance Serialize Command
+
+data IdCommand = IdCreate | IdList deriving (Show, Generic)
+instance Serialize IdCommand
+
+--data IdOptions = IdOptions
+--  { test :: Bool }
+--  deriving (Show, Generic)
