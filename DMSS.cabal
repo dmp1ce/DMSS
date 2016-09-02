@@ -35,7 +35,6 @@ library
                    , daemons
                    , data-default
                    , h-gpgme
-                   , turtle
                    , optparse-applicative
                    , cereal
                    , ansi-wl-pprint

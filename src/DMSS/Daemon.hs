@@ -20,7 +20,7 @@ import Control.Pipe.C3 ( commandReceiver )
 import Control.Concurrent ( forkIO, threadDelay )
 
 import Crypto.Gpgme
-import Turtle
+import Control.Monad (forever)
 
 type Response = String
 
@@ -60,7 +60,7 @@ createGpgIdentity :: IO ()
 createGpgIdentity = do
   putStrLn "Trying to create GPG key here."
   -- Just use shell for now since h-gpgme doesn't have support for creating keys and I don't now how to use gpgme bindings yet.
-  _ <- proc "gpg" ["--help"] empty
+  -- _ <- proc "gpg" ["--help"] empty
   return ()
 
 daemonVersion :: String
