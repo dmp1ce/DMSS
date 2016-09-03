@@ -19,6 +19,7 @@ import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , line
                                                    , (<$>)
                                                    )
+--import DMSS.Config
 
 data Cli = Cli
   { optCommand :: Command }

@@ -13,24 +13,34 @@
 module DMSS.Daemon where
 
 import DMSS.Command
+import DMSS.Config
 
---import Data.Default (def)
+import Crypto.Gpgme
+import qualified  Crypto.Gpgme.Key.Gen as G
+
+import Data.Default (def)
 import System.Daemon
 import Control.Pipe.C3 ( commandReceiver )
 import Control.Concurrent ( forkIO, threadDelay )
-
-import Crypto.Gpgme
 import Control.Monad (forever)
 
 type Response = String
 
 checkerDaemon :: Command -> IO Response
 checkerDaemon (Id IdCreate) = do
-  putStrLn $ "Receive Id Create command"
-  return "Thanks for the Id Create command. Not currently doing anything about it though"
+  l <- gpgContext
+  let params = (def :: G.GenKeyParams)
+        { G.keyType = Just Dsa
+        , G.nameReal = "Tester bob"
+        }
+  ret <- withCtx l "C" OpenPGP $ \ctx ->
+    G.genKey ctx params
+  return $ show ret
 checkerDaemon (Id IdList) = do
-  putStrLn $ "Receive Id List command"
-  return "Thanks for the Id List command. Not currently doing anything about it though"
+  l <- gpgContext
+  res <- withCtx l "C" OpenPGP $ \ctx ->
+    listKeys ctx WithSecret
+  return $ show $ map (map keyuserId . keyUserIds) res
 checkerDaemon Version = return $ "Daemon version: " ++ daemonVersion
 
 daemonMain :: IO ()
@@ -43,6 +53,9 @@ daemonMain = do
     threadDelay (ms * num_ms)
     putStrLn $ "heartbeat"
   putStrLn $ "Done"
+
+  -- Make sure local directory exists for storing data
+  createLocalDirectory
 
   -- Start daemon process
   runInForeground 5000 (commandReceiver checkerDaemon)
