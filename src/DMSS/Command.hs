@@ -15,7 +15,9 @@ module DMSS.Command where
 import Data.Serialize
 import GHC.Generics
 
-data Command = Id IdCommand | Version deriving (Show, Generic)
+data Command = Id IdCommand
+             | Version
+             | Status deriving (Show, Generic)
 instance Serialize Command
 
 data IdCommand = IdCreate | IdList deriving (Show, Generic)

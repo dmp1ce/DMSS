@@ -31,6 +31,8 @@ idParser :: Parser Command
 idParser = hsubparser
   ( command "id" (info (Id <$> idCommandParser)
     ( progDesc "Manage IDs" ))
+ <> command "status" (info (pure Status)
+    ( progDesc "Some status about the system"))
  <> command "version" (info (pure Version)
     ( progDesc "Version info here"))
   )
@@ -60,10 +62,16 @@ process (Cli (Id IdList)) = do
   putStrLn "ID List command"
   res <- runClient "localhost" 5000 (Id IdList)
   print (res :: Maybe String)
+process (Cli Status) = do
+  res <- runClient "localhost" 5000 Status
+  print (res :: Maybe String)
 process (Cli Version) = do
   putStrLn $ "CLI version: " ++ cliVersion
   res <- runClient "localhost" 5000 Version
   print (res :: Maybe String)
+
+runCommand :: Command -> IO (Maybe String)
+runCommand c = runClient "localhost" 5000 c
 
 cliMain :: IO ()
 cliMain = execParser opts >>= process

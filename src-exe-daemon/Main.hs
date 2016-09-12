@@ -1,4 +1,4 @@
 import DMSS.Daemon
 
 main :: IO ()
-main = daemonMain
+main = daemonMain defaultOptions

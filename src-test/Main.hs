@@ -3,14 +3,16 @@ import Test.Tasty.HUnit
 import Test.Tasty.SmallCheck
 
 import Lib (inc)
+import DaemonTest
 
 main :: IO ()
-main = defaultMain $ testGroup "all-tests" tests
+main = defaultMain $ testGroup "all-tests" Main.tests
 
 tests :: [TestTree]
 tests =
   [ testGroup "SmallCheck" scTests
   , testGroup "Unit tests" huTests
+  , testGroup "Daemon tests" DaemonTest.tests
   ]
 
 scTests :: [TestTree]
