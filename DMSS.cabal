@@ -31,7 +31,6 @@ library
                    , DMSS.CLI
                    , DMSS.Command
                    , DMSS.Config
-                   , Lib
   build-depends:     base >= 4.8 && < 5
                    , daemons
                    , data-default
@@ -41,6 +40,9 @@ library
                    , ansi-wl-pprint
                    , directory
                    , silently
+                   , bytestring
+                   , email-validate
+                   , pretty
 
 executable dmss-cli
   default-language:  Haskell2010
@@ -70,6 +72,7 @@ test-suite DMSS-test
                    , tasty-smallcheck >= 0.8
                    , silently
                    , DMSS
+  other-modules:     DaemonTest
 
 test-suite DMSS-doctest
   type:              exitcode-stdio-1.0

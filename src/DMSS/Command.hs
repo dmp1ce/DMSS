@@ -20,9 +20,9 @@ data Command = Id IdCommand
              | Status deriving (Show, Generic)
 instance Serialize Command
 
-data IdCommand = IdCreate | IdList deriving (Show, Generic)
+-- | Top level commands
+data IdCommand = IdCreate (Maybe String) -- Name of id
+                          (Maybe String) -- ^ Contact information
+               | IdRemove
+               | IdList deriving (Show, Generic)
 instance Serialize IdCommand
-
---data IdOptions = IdOptions
---  { test :: Bool }
---  deriving (Show, Generic)

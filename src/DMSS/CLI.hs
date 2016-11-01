@@ -12,14 +12,23 @@
 module DMSS.CLI where
 
 import DMSS.Command
+import DMSS.Config
+
+import Crypto.Gpgme
+import qualified  Crypto.Gpgme.Key.Gen   as G
 
 import System.Daemon (runClient)
+import Text.Email.Validate
+import qualified  Text.PrettyPrint       as PP
 import Options.Applicative
+import Data.Default (def)
+--import Data.List
+import qualified Data.ByteString.Char8   as C
+--import qualified Data.ByteString       as BS
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , line
                                                    , (<$>)
                                                    )
---import DMSS.Config
 
 data Cli = Cli
   { optCommand :: Command }
@@ -39,35 +48,85 @@ idParser = hsubparser
 
 idCommandParser :: Parser IdCommand
 idCommandParser = hsubparser
-  ( command "create" (info (pure IdCreate)
+  ( command "create" (info ( IdCreate
+                           <$> nameOption
+                           <*> emailOption
+                           )
     ( progDesc "Create IDs" ))
+ <> command "remove" (info (pure IdRemove)
+    ( progDesc "Remove ID" ))
  <> command "list" (info (pure IdList)
     ( progDesc "List IDs" ))
   )
-
-
---idOptions :: Parser IdOptions
---idOptions = pure IdOptions
---  <$> switch
---      ( long "test"
---     <> help "just for testing" )
-
+  where
+    nameOption = optional $ strOption
+      ( long "name"
+     <> short 'n'
+     <> help "Name of ID" )
+    emailOption = optional $ strOption
+      ( long "email"
+     <> short 'e'
+     <> value ""
+     <> help "Email of ID" )
 
 process :: Cli -> IO ()
-process (Cli (Id IdCreate)) = do
-  putStrLn "ID Create command"
-  res <- runClient "localhost" 5000 (Id IdCreate)
-  print (res :: Maybe String)
+process (Cli (Id (IdCreate Nothing e))) = do
+  putStrLn "Please enter the name for the ID:"
+  n <- getLine
+  process $ Cli $ Id $ IdCreate (Just n) e
+process (Cli (Id (IdCreate (Just n) e))) = do
+  -- Create GPG id
+  l <- gpgContext
+  let params = (def :: G.GenKeyParams)
+        { G.keyType = Just Dsa
+        , G.nameReal = C.pack n
+        , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
+        }
+  createLocalDirectory
+  ret <- withCtx l "C" OpenPGP $ \ctx ->
+    G.genKey ctx params
+  putStrLn $ show ret
+
 process (Cli (Id IdList)) = do
   putStrLn "ID List command"
-  res <- runClient "localhost" 5000 (Id IdList)
-  print (res :: Maybe String)
+  l <- gpgContext
+  res <- withCtx l "C" OpenPGP $ \ctx ->
+    listKeys ctx WithSecret
+  ids <- mapM (\k -> do
+              i <- keyUserIds' k
+              s <- keySubKeys' k
+              return (i,s)
+            ) res
+  putStrLn $ PP.render (draw $ map (\i -> (fst i, snd i)) ids)
+  where
+    draw :: [([KeyUserId], [SubKey])] -> PP.Doc
+    draw xs =
+      row "NAME" "EMAIL" "FINGERPRINT" PP.$+$ PP.vcat (map dataRow xs)
+    row n e f =
+      let nameColWidth = 15
+          emailColWidth = 30
+       in PP.text (ellipsis nameColWidth n)
+          PP.$$ PP.nest nameColWidth (PP.text (ellipsis emailColWidth e))
+          PP.$$ PP.nest (nameColWidth+emailColWidth) (PP.text f)
+    ellipsis n s
+      | ((length s) > (n-4)) = (take (n-4) s) ++ "..."
+      | otherwise            = s
+    dataRow :: ([KeyUserId], [SubKey]) -> PP.Doc
+    dataRow (names, subkeys) =
+      row
+        (foldr (\n a -> a <> (userName $ keyuserId n)) [] names)
+        (foldr (\n a -> a <> (userEmail $ keyuserId n)) [] names)
+        (foldr (\sk a -> a <> (C.unpack $ subkeyFpr sk)) [] subkeys)
+
+process (Cli (Id IdRemove)) = do
+  putStrLn "ID Remove command"
+
 process (Cli Status) = do
-  res <- runClient "localhost" 5000 Status
+  res <- runCommand Status
   print (res :: Maybe String)
 process (Cli Version) = do
   putStrLn $ "CLI version: " ++ cliVersion
-  res <- runClient "localhost" 5000 Version
+  res <- runCommand Version
   print (res :: Maybe String)
 
 runCommand :: Command -> IO (Maybe String)
@@ -81,8 +140,9 @@ cliMain = execParser opts >>= process
      <> progDescDoc ( Just ( P.text "CLI for managing the DMSS."
                       P.<$> P.line
                       P.<$> P.text "Commands: "
-                      P.<$> P.text "id create - Will create an ID"
-                      P.<$> P.text "id list - Will list an IDs")
+                      P.<$> P.text "id create - Create an ID"
+                      P.<$> P.text "id list   - List an IDs"
+                      P.<$> P.text "id remove - Remove an ID")
                     )
      <> header "DMSS Command Line Interface" )
 
