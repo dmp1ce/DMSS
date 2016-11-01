@@ -113,10 +113,11 @@ process (Cli (Id IdList)) = do
       | otherwise            = s
     dataRow :: ([KeyUserId], [SubKey]) -> PP.Doc
     dataRow (names, subkeys) =
-      row
-        (foldr (\n a -> a <> (userName $ keyuserId n)) [] names)
-        (foldr (\n a -> a <> (userEmail $ keyuserId n)) [] names)
-        (foldr (\sk a -> a <> (C.unpack $ subkeyFpr sk)) [] subkeys)
+      row (cc (userName . keyuserId) names)
+        (cc (userEmail . keyuserId) names)
+        (cc (C.unpack . subkeyFpr) subkeys)
+      where
+        cc f l = unwords (foldr (\n a -> (f n):a) [] l)
 
 process (Cli (Id IdRemove)) = do
   putStrLn "ID Remove command"
