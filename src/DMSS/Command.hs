@@ -23,6 +23,6 @@ instance Serialize Command
 -- | Top level commands
 data IdCommand = IdCreate (Maybe String) -- Name of id
                           (Maybe String) -- ^ Contact information
-               | IdRemove
+               | IdRemove (String)       -- Fingerprint
                | IdList deriving (Show, Generic)
 instance Serialize IdCommand

@@ -18,6 +18,7 @@ import Crypto.Gpgme
 import qualified  Crypto.Gpgme.Key.Gen   as G
 
 import System.Daemon (runClient)
+import Data.Maybe (fromJust)
 import Text.Email.Validate
 import qualified  Text.PrettyPrint       as PP
 import Options.Applicative
@@ -53,7 +54,9 @@ idCommandParser = hsubparser
                            <*> emailOption
                            )
     ( progDesc "Create IDs" ))
- <> command "remove" (info (pure IdRemove)
+ <> command "remove" (info ( IdRemove
+                           <$> argument str (metavar "FINGERPRINT")
+                           )
     ( progDesc "Remove ID" ))
  <> command "list" (info (pure IdList)
     ( progDesc "List IDs" ))
@@ -119,8 +122,13 @@ process (Cli (Id IdList)) = do
       where
         cc f l = unwords (foldr (\n a -> (f n):a) [] l)
 
-process (Cli (Id IdRemove)) = do
+process (Cli (Id (IdRemove fpr))) = do
   putStrLn "ID Remove command"
+  l <- gpgContext
+  ret <- withCtx l "C" OpenPGP $ \ctx -> do
+    key <- getKey ctx (C.pack fpr) WithSecret
+    removeKey ctx (fromJust key) WithSecret
+  putStrLn $ show ret
 
 process (Cli Status) = do
   res <- runCommand Status
