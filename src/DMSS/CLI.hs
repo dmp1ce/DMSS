@@ -25,7 +25,7 @@ import Options.Applicative
 import Data.Default (def)
 import qualified Data.ByteString.Char8   as C
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
-                                                   , line
+                                                   , softline
                                                    , (<$>)
                                                    )
 
@@ -39,10 +39,19 @@ idParser :: Parser Command
 idParser = hsubparser
   ( command "id" (info (Id <$> idCommandParser)
     ( progDesc "Manage IDs" ))
+ <> command "checkin" (info (CheckIn <$> checkInCommandParser)
+    ( progDesc "Manage CheckIns"))
  <> command "status" (info (pure Status)
     ( progDesc "Some status about the system"))
  <> command "version" (info (pure Version)
     ( progDesc "Version info here"))
+  )
+
+checkInCommandParser :: Parser CheckInCommand
+checkInCommandParser = hsubparser
+  ( command "create" (info ( CheckInCreate <$> argument str (metavar "FINGERPRINT"))
+    (progDesc "Create CheckIn proof" ))
+ <> command "list" (info (pure CheckInList) (progDesc "List CheckIns" ))
   )
 
 idCommandParser :: Parser IdCommand
@@ -128,6 +137,19 @@ process (Cli (Id (IdRemove fpr))) = do
     key <- getKey ctx (C.pack fpr) WithSecret
     removeKey ctx (fromJust key) WithSecret
   putStrLn $ show ret
+
+process (Cli (CheckIn (CheckInCreate fpr))) = do
+  putStrLn $ "CheckIn for " ++ fpr
+  l <- gpgContext
+  eitherCT <- withCtx l "C" OpenPGP $ \ctx -> do
+    maybeKey <- getKey ctx (C.pack fpr) WithSecret
+    let key = maybe (error ("Invalid key id " ++ fpr)) id maybeKey
+    clearSign ctx [key] (C.pack "Logged in at this date 2016-12-07")
+  let ct = either (\e -> error $ show e) id eitherCT
+  putStrLn (C.unpack ct)
+
+process (Cli (CheckIn _)) = do
+  putStrLn "CheckIn command here"
 
 process (Cli Status) = do
   res <- runCommand Status

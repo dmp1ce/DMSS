@@ -17,6 +17,7 @@ import GHC.Generics
 
 -- | High level commands
 data Command = Id IdCommand
+             | CheckIn CheckInCommand
              | Version
              | Status deriving (Show, Generic)
 instance Serialize Command
@@ -26,3 +27,9 @@ data IdCommand = IdCreate (Maybe String) (Maybe String) -- ^ Name of id and cont
                | IdRemove (String)                      -- ^ Fingerprint
                | IdList deriving (Show, Generic)
 instance Serialize IdCommand
+
+-- | CheckIn command
+data CheckInCommand = CheckInCreate (String) -- ^ Create new checkin
+                    | CheckInList            -- ^ List past checkins
+  deriving (Show, Generic)
+instance Serialize CheckInCommand
