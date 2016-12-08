@@ -75,6 +75,7 @@ process (Cli (Id (IdCreate Nothing e))) = do
   putStrLn "Please enter the name for the ID:"
   n <- getLine
   process $ Cli $ Id $ IdCreate (Just n) e
+
 process (Cli (Id (IdCreate (Just n) e))) = do
   -- Create GPG id
   l <- gpgContext
@@ -144,12 +145,12 @@ cliMain = execParser opts >>= process
   where
     opts = info (helper <*> cliParser)
       ( fullDesc
-     <> progDescDoc ( Just ( P.text "CLI for managing the DMSS."
-                      P.<$> P.line
-                      P.<$> P.text "Commands: "
-                      P.<$> P.text "id create - Create an ID"
-                      P.<$> P.text "id list   - List an IDs"
-                      P.<$> P.text "id remove - Remove an ID")
+     <> progDescDoc ( Just (
+                      P.text "CLI for managing the DMSS."
+                      P.<$> P.softline
+                      P.<$> P.text "Use the '--help' flag to find more information about sub commands."
+                      P.<$> P.text "For example 'dmss-cli id --help' or 'dmss-cli id create -h'."
+                      )
                     )
      <> header "DMSS Command Line Interface" )
 
