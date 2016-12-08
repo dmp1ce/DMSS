@@ -23,9 +23,7 @@ import Text.Email.Validate
 import qualified  Text.PrettyPrint       as PP
 import Options.Applicative
 import Data.Default (def)
---import Data.List
 import qualified Data.ByteString.Char8   as C
---import qualified Data.ByteString       as BS
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , line
                                                    , (<$>)
