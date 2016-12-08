@@ -15,14 +15,14 @@ module DMSS.Command where
 import Data.Serialize
 import GHC.Generics
 
+-- | High level commands
 data Command = Id IdCommand
              | Version
              | Status deriving (Show, Generic)
 instance Serialize Command
 
--- | Top level commands
-data IdCommand = IdCreate (Maybe String) -- Name of id
-                          (Maybe String) -- ^ Contact information
-               | IdRemove (String)       -- Fingerprint
+-- | Id command
+data IdCommand = IdCreate (Maybe String) (Maybe String) -- ^ Name of id and contact information
+               | IdRemove (String)                      -- ^ Fingerprint
                | IdList deriving (Show, Generic)
 instance Serialize IdCommand
