@@ -13,6 +13,7 @@ module DMSS.CLI where
 
 import DMSS.Command
 import DMSS.Config
+import DMSS.Storage ( storeCheckIn, storeUserKey )
 
 import Crypto.Gpgme
 import qualified  Crypto.Gpgme.Key.Gen   as G
@@ -94,8 +95,13 @@ process (Cli (Id (IdCreate (Just n) e))) = do
         , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
         }
   createLocalDirectory
-  ret <- withCtx l "C" OpenPGP $ \ctx ->
-    G.genKey ctx params
+  ret <- withCtx l "C" OpenPGP $ \ctx -> do
+    eitherFpr <- G.genKey ctx params
+    either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
+      (\fpr -> do
+          s <- storeUserKey $ C.unpack fpr
+          return $ show s)
+      eitherFpr
   putStrLn $ show ret
 
 process (Cli (Id IdList)) = do
@@ -146,7 +152,8 @@ process (Cli (CheckIn (CheckInCreate fpr))) = do
     let key = maybe (error ("Invalid key id " ++ fpr)) id maybeKey
     clearSign ctx [key] (C.pack "Logged in at this date 2016-12-07")
   let ct = either (\e -> error $ show e) id eitherCT
-  putStrLn (C.unpack ct)
+  _ <- storeCheckIn (C.unpack ct)
+  return ()
 
 process (Cli (CheckIn _)) = do
   putStrLn "CheckIn command here"

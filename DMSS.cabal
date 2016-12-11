@@ -31,6 +31,7 @@ library
                    , DMSS.CLI
                    , DMSS.Command
                    , DMSS.Config
+                   , DMSS.Storage
   build-depends:     base >= 4.8 && < 5
                    , daemons
                    , data-default
@@ -43,6 +44,10 @@ library
                    , bytestring
                    , email-validate
                    , pretty
+                   , persistent
+                   , persistent-sqlite
+                   , persistent-template
+                   , text
 
 executable dmss-cli
   default-language:  Haskell2010
