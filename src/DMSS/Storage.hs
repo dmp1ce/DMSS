@@ -28,18 +28,21 @@ module DMSS.Storage ( storeCheckIn
 
 
 import           DMSS.Config ( localDirectory )
+import           DMSS.Util  ( getCurrentTimeInSeconds )
 
 import           Database.Persist.Sqlite
 import           Database.Persist.TH
 import           Data.Text ( pack )
 
+import           Control.Monad.IO.Class ( liftIO )
+
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 UserKey
   fingerprint String
-  date String
+  date Int -- ^ POSIX time
 CheckIn
   raw_data String
-  date String
+  date Int -- ^ POSIX time
   deriving Show
 |]
 
@@ -55,14 +58,14 @@ migrateStorage = do
 -- | Store UsedKey information
 storeUserKey :: String -> IO (Key UserKey)
 storeUserKey s = dbConnectionString >>= \c -> runSqlite (pack c) $ do
-  -- TODO: Get the current date
-  insert $ UserKey s "Missing date"
+  t <- liftIO getCurrentTimeInSeconds
+  insert $ UserKey s t
 
 -- | Store a CheckIn
 storeCheckIn :: String -> IO (Key CheckIn)
 storeCheckIn s = dbConnectionString >>= \c -> runSqlite (pack c) $ do
-  -- TODO: Get the current date
-  insert $ CheckIn s "Missing date"
+  t <- liftIO getCurrentTimeInSeconds
+  insert $ CheckIn s t
 
 -- | List the last `Int` checkins sorted by date 
 listCheckIns :: Int -> IO ([Entity CheckIn])

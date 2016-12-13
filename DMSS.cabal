@@ -32,6 +32,7 @@ library
                    , DMSS.Command
                    , DMSS.Config
                    , DMSS.Storage
+                   , DMSS.Util
   build-depends:     base >= 4.8 && < 5
                    , daemons
                    , data-default
@@ -48,6 +49,8 @@ library
                    , persistent-sqlite
                    , persistent-template
                    , text
+                   , time
+                   , transformers
 
 executable dmss-cli
   default-language:  Haskell2010
