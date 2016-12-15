@@ -81,6 +81,8 @@ test-suite DMSS-test
                    , silently
                    , DMSS
   other-modules:     DaemonTest
+                   , StorageTest
+                   , CLITest
 
 test-suite DMSS-doctest
   type:              exitcode-stdio-1.0

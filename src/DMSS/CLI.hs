@@ -13,7 +13,12 @@ module DMSS.CLI where
 
 import DMSS.Command
 import DMSS.Config
-import DMSS.Storage ( storeCheckIn, storeUserKey )
+import DMSS.Storage ( storeCheckIn
+                    , storeUserKey
+                    , removeUserKey
+                    , Fingerprint (..)
+                    , CheckInProof (..)
+                    )
 
 import Crypto.Gpgme
 import qualified  Crypto.Gpgme.Key.Gen   as G
@@ -99,13 +104,12 @@ process (Cli (Id (IdCreate (Just n) e))) = do
     eitherFpr <- G.genKey ctx params
     either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
       (\fpr -> do
-          s <- storeUserKey $ C.unpack fpr
+          s <- storeUserKey $ Fingerprint $ C.unpack fpr
           return $ show s)
       eitherFpr
   putStrLn $ show ret
 
 process (Cli (Id IdList)) = do
-  putStrLn "ID List command"
   l <- gpgContext
   res <- withCtx l "C" OpenPGP $ \ctx ->
     listKeys ctx WithSecret
@@ -137,12 +141,18 @@ process (Cli (Id IdList)) = do
         cc f l = unwords (foldr (\n a -> (f n):a) [] l)
 
 process (Cli (Id (IdRemove fpr))) = do
-  putStrLn "ID Remove command"
+  -- Remove from Storage
+  removeUserKey (Fingerprint fpr)
+
   l <- gpgContext
   ret <- withCtx l "C" OpenPGP $ \ctx -> do
     key <- getKey ctx (C.pack fpr) WithSecret
+
+    -- Remove from GPG context
     removeKey ctx (fromJust key) WithSecret
-  putStrLn $ show ret
+  case ret of
+    Nothing  -> return ()
+    (Just e) -> putStrLn $ show e
 
 process (Cli (CheckIn (CheckInCreate fpr))) = do
   putStrLn $ "CheckIn for " ++ fpr
@@ -152,7 +162,7 @@ process (Cli (CheckIn (CheckInCreate fpr))) = do
     let key = maybe (error ("Invalid key id " ++ fpr)) id maybeKey
     clearSign ctx [key] (C.pack "Logged in at this date 2016-12-07")
   let ct = either (\e -> error $ show e) id eitherCT
-  _ <- storeCheckIn (C.unpack ct)
+  _ <- storeCheckIn (Fingerprint fpr) (CheckInProof $ C.unpack ct)
   return ()
 
 process (Cli (CheckIn _)) = do
