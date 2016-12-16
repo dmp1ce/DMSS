@@ -79,6 +79,8 @@ test-suite DMSS-test
                    , tasty-hunit >= 0.9
                    , tasty-smallcheck >= 0.8
                    , silently
+                   , Unixutils
+                   , directory
                    , DMSS
   other-modules:     DaemonTest
                    , StorageTest
