@@ -21,6 +21,7 @@ module DMSS.Storage ( storeCheckIn
                     , listCheckIns
                     , migrateStorage
                     , storeUserKey
+                    , getUserKeyKey
                     , removeUserKey
                     , CheckInId
                     , UserKeyId
@@ -35,7 +36,9 @@ import           DMSS.Util  ( getCurrentTimeInSeconds )
 
 import           Database.Persist.Sqlite
 import           Database.Persist.TH
-import           Data.Text ( pack )
+import           Data.Text ( pack
+                           , Text
+                           )
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 UserKey
@@ -49,17 +52,17 @@ CheckIn
   deriving Show
 |]
 
-newtype Fingerprint  = Fingerprint String
-newtype CheckInProof = CheckInProof String
+newtype Fingerprint  = Fingerprint  { unFingerprint :: String }
+newtype CheckInProof = CheckInProof { unCheckInProof :: String }
 
 dbConnectionString :: IO String
 dbConnectionString = localDirectory >>= (\ld -> pure $ ld ++ "/dmss.sqlite")
 
 -- | Run Persistent migration
-migrateStorage :: IO ()
+migrateStorage :: IO [Text]
 migrateStorage = do
   c <- dbConnectionString
-  runSqlite (pack c) $ runMigration migrateAll
+  runSqlite (pack c) $ runMigrationSilent migrateAll
 
 -- | Store UserKey information
 storeUserKey :: Fingerprint -- ^ UserKey Fingerprint
@@ -81,9 +84,9 @@ removeUserKey (Fingerprint fpr) = do
     deleteBy $ UniqueFingerprint fpr
 
 -- | Get UserKey ID
-getUserKeyId :: Fingerprint -- ^ UserKey Fingerprint
+getUserKeyKey :: Fingerprint -- ^ UserKey Fingerprint
              -> IO (Maybe (Key UserKey))
-getUserKeyId (Fingerprint fpr) = dbConnectionString >>= \c -> runSqlite (pack c) $ do
+getUserKeyKey (Fingerprint fpr) = dbConnectionString >>= \c -> runSqlite (pack c) $ do
   maybeUserKey <- getBy $ UniqueFingerprint fpr
   maybe
     (pure Nothing)
@@ -98,7 +101,7 @@ storeCheckIn :: Fingerprint   -- ^ Fingerprint of users key
              -> IO (Either String (Key CheckIn))
 storeCheckIn fpr (CheckInProof rawCheckInData) = do
   t <- getCurrentTimeInSeconds
-  m <- getUserKeyId fpr
+  m <- getUserKeyKey fpr
   dbConnectionString >>= \c -> runSqlite (pack c) $ maybe
     (pure $ Left "Could not find users fingerprint in DB")
     (\i -> do

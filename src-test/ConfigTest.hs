@@ -4,29 +4,24 @@ import Test.Tasty
 import Test.Tasty.HUnit
 --import Test.Tasty.SmallCheck
 
-import System.Unix.Directory
 import System.Directory
-import System.Environment
 
 import DMSS.Config
 
+import Common
+
 tests :: [TestTree]
 tests =
-  [ testCase "Create config directory" createConfigDirectory
+  [ testCase "createConfigDirectory" createConfigDirectory
   ]
 
 tempDir :: FilePath
 tempDir = "configTest"
 
 createConfigDirectory :: Assertion
-createConfigDirectory = do
-  withTemporaryDirectory tempDir ( \s -> do
-    -- Change HOME environment variable to temporary directory
-    setEnv "HOME" s
-    -- Create local home directory for DMSS
-    createLocalDirectory
-    -- Check that the GPG context directory exists
+createConfigDirectory = withTemporaryTestDirectory tempDir
+  ( \_ -> do
     g <- gpgContext
     gExists <- doesDirectoryExist g
     assertBool ("GPG context directory (" ++ g ++ ")does not exist") gExists
-    )
+  )

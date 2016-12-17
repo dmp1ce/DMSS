@@ -12,8 +12,8 @@ main = defaultMain $ testGroup "all-tests" Main.tests
 
 tests :: [TestTree]
 tests =
-  [ testGroup "Config tests" ConfigTest.tests
-  , testGroup "Storage tests" StorageTest.tests
-  , testGroup "Daemon tests" DaemonTest.tests
-  , testGroup "CLI tests" CLITest.tests
+  [ testGroup "config"  ConfigTest.tests
+  , testGroup "storage" StorageTest.tests
+  , testGroup "daemon"  DaemonTest.tests
+  , testGroup "cli"     CLITest.tests
   ]
