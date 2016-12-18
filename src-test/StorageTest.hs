@@ -5,9 +5,11 @@ import Test.Tasty.HUnit
 --import Test.Tasty.SmallCheck
 
 import DMSS.Storage ( getUserKeyKey
-                    , migrateStorage
                     , storeUserKey
                     , Fingerprint (..)
+                    , CheckInProof (..)
+                    , storeCheckIn
+                    , listCheckIns
                     )
 
 import Common
@@ -23,10 +25,7 @@ tempDir :: FilePath
 tempDir = "storageTest"
 
 storeUserKeyTest :: Assertion
-storeUserKeyTest = withTemporaryTestDirectory tempDir ( \_ -> do
-    -- Prepare database
-    _ <- migrateStorage
-
+storeUserKeyTest = withTemporaryTestStorage tempDir ( \_ -> do
     -- Store fake user key
     let fpr = Fingerprint "hello1234"
     _ <- storeUserKey fpr
@@ -39,7 +38,21 @@ storeUserKeyTest = withTemporaryTestDirectory tempDir ( \_ -> do
   )
 
 storeCheckInTest :: Assertion
-storeCheckInTest = assertFailure "No test here!"
+storeCheckInTest = withTemporaryTestStorage tempDir ( \_ -> do
+    -- Store a checkin
+    let fpr = Fingerprint "MyFingerprint"
+    _ <- storeUserKey fpr
+    res <- storeCheckIn fpr (CheckInProof "MyProof")
+    case res of
+      (Left s) -> assertFailure s
+      _ -> return ()
+    -- Get a list of checkins
+    l <- listCheckIns 10
+    -- Verify that only one checkin was returned
+    case l of
+      (_:[])    -> return ()
+      x         -> assertFailure $ "Did not find one checkin: " ++ show x
+  )
 
 removeUserKeyTest :: Assertion
 removeUserKeyTest = assertFailure "No test here!"

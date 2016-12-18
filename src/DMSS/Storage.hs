@@ -27,6 +27,7 @@ module DMSS.Storage ( storeCheckIn
                     , UserKeyId
                     , Fingerprint (..)
                     , CheckInProof (..)
+                    , dbConnectionString
                     )
   where
 
@@ -56,7 +57,7 @@ newtype Fingerprint  = Fingerprint  { unFingerprint :: String }
 newtype CheckInProof = CheckInProof { unCheckInProof :: String }
 
 dbConnectionString :: IO String
-dbConnectionString = localDirectory >>= (\ld -> pure $ ld ++ "/dmss.sqlite")
+dbConnectionString = localDirectory >>= \ld -> pure $ ld ++ "/dmss.sqlite"
 
 -- | Run Persistent migration
 migrateStorage :: IO [Text]
@@ -92,7 +93,6 @@ getUserKeyKey (Fingerprint fpr) = dbConnectionString >>= \c -> runSqlite (pack c
     (pure Nothing)
     (\(Entity userKeyId _) -> pure $ Just userKeyId)
     maybeUserKey
-
 
 
 -- | Store a CheckIn
