@@ -12,7 +12,7 @@ import Common
 
 tests :: [TestTree]
 tests =
-  [ testCase "createConfigDirectory" createConfigDirectory
+  [ testCase "create_config_directory" createConfigDirectory
   ]
 
 tempDir :: FilePath

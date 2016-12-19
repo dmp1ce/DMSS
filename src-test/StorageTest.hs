@@ -17,9 +17,9 @@ import Common
 
 tests :: [TestTree]
 tests =
-  [ testCase "storeUserKeyTest" storeUserKeyTest
-  , testCase "storeCheckInTest" storeCheckInTest
-  , testCase "removeUserKeyTest" removeUserKeyTest
+  [ testCase "store_user_key_test" storeUserKeyTest
+  , testCase "store_check_in_test" storeCheckInTest
+  , testCase "remove_user_key_test" removeUserKeyTest
   ]
 
 tempDir :: FilePath
