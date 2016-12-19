@@ -6,6 +6,7 @@ import Test.Tasty.HUnit
 
 import DMSS.Storage ( getUserKeyKey
                     , storeUserKey
+                    , removeUserKey
                     , Fingerprint (..)
                     , CheckInProof (..)
                     , storeCheckIn
@@ -33,8 +34,24 @@ storeUserKeyTest = withTemporaryTestStorage tempDir ( \_ -> do
     -- Check that the fake user key was stored
     k <- getUserKeyKey fpr
     case k of
-      Nothing -> assertFailure "Could not find UserKey based on (Fingerprint)"
+      Nothing -> assertFailure $ "Could not find UserKey based on (" ++ (unFingerprint fpr) ++ ")"
       _       -> return ()
+  )
+
+removeUserKeyTest :: Assertion
+removeUserKeyTest = withTemporaryTestStorage tempDir ( \_ -> do
+    -- Store fake user key
+    let fpr = Fingerprint "deleteMe1234"
+    _ <- storeUserKey fpr
+
+    -- Remove key
+    removeUserKey fpr
+
+    -- Check that the fake user key was stored
+    k <- getUserKeyKey fpr
+    case k of
+      Nothing -> return ()
+      _       -> assertFailure $ "Found UserKey based on (" ++ (unFingerprint fpr) ++ ") but shouldn't have"
   )
 
 storeCheckInTest :: Assertion
@@ -53,6 +70,3 @@ storeCheckInTest = withTemporaryTestStorage tempDir ( \_ -> do
       (_:[])    -> return ()
       x         -> assertFailure $ "Did not find one checkin: " ++ show x
   )
-
-removeUserKeyTest :: Assertion
-removeUserKeyTest = assertFailure "No test here!"
