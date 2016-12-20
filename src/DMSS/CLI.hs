@@ -13,22 +13,16 @@ module DMSS.CLI where
 
 import DMSS.Command
 import DMSS.Config
+import DMSS.CLI.Internal
 import DMSS.Storage ( storeCheckIn
-                    , storeUserKey
-                    , removeUserKey
                     , Fingerprint (..)
                     , CheckInProof (..)
                     )
 
 import Crypto.Gpgme
-import qualified  Crypto.Gpgme.Key.Gen   as G
 
 import System.Daemon (runClient)
-import Data.Maybe (fromJust)
-import Text.Email.Validate
-import qualified  Text.PrettyPrint       as PP
 import Options.Applicative
-import Data.Default (def)
 import qualified Data.ByteString.Char8   as C
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , softline
@@ -90,69 +84,13 @@ process (Cli (Id (IdCreate Nothing e))) = do
   putStrLn "Please enter the name for the ID:"
   n <- getLine
   process $ Cli $ Id $ IdCreate (Just n) e
-
-process (Cli (Id (IdCreate (Just n) e))) = do
-  -- Create GPG id
-  l <- gpgContext
-  let params = (def :: G.GenKeyParams)
-        { G.keyType = Just Dsa
-        , G.nameReal = C.pack n
-        , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
-        }
-  createLocalDirectory
-  ret <- withCtx l "C" OpenPGP $ \ctx -> do
-    eitherFpr <- G.genKey ctx params
-    either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
-      (\fpr -> do
-          s <- storeUserKey $ Fingerprint $ C.unpack fpr
-          return $ show s)
-      eitherFpr
-  putStrLn $ show ret
-
-process (Cli (Id IdList)) = do
-  l <- gpgContext
-  res <- withCtx l "C" OpenPGP $ \ctx ->
-    listKeys ctx WithSecret
-  ids <- mapM (\k -> do
-              i <- keyUserIds' k
-              s <- keySubKeys' k
-              return (i,s)
-            ) res
-  putStrLn $ PP.render (draw $ map (\i -> (fst i, snd i)) ids)
-  where
-    draw :: [([KeyUserId], [SubKey])] -> PP.Doc
-    draw xs =
-      row "NAME" "EMAIL" "FINGERPRINT" PP.$+$ PP.vcat (map dataRow xs)
-    row n e f =
-      let nameColWidth = 15
-          emailColWidth = 30
-       in PP.text (ellipsis nameColWidth n)
-          PP.$$ PP.nest nameColWidth (PP.text (ellipsis emailColWidth e))
-          PP.$$ PP.nest (nameColWidth+emailColWidth) (PP.text f)
-    ellipsis n s
-      | ((length s) > (n-4)) = (take (n-4) s) ++ "..."
-      | otherwise            = s
-    dataRow :: ([KeyUserId], [SubKey]) -> PP.Doc
-    dataRow (names, subkeys) =
-      row (cc (userName . keyuserId) names)
-        (cc (userEmail . keyuserId) names)
-        (cc (C.unpack . subkeyFpr) subkeys)
-      where
-        cc f l = unwords (foldr (\n a -> (f n):a) [] l)
-
+process (Cli (Id (IdCreate (Just n) e))) = processIdCreate n e >>= putStrLn
+process (Cli (Id IdList)) = processIdList >>= putStrLn
 process (Cli (Id (IdRemove fpr))) = do
-  -- Remove from Storage
-  removeUserKey (Fingerprint fpr)
-
-  l <- gpgContext
-  ret <- withCtx l "C" OpenPGP $ \ctx -> do
-    key <- getKey ctx (C.pack fpr) WithSecret
-
-    -- Remove from GPG context
-    removeKey ctx (fromJust key) WithSecret
-  case ret of
-    Nothing  -> return ()
-    (Just e) -> putStrLn $ show e
+  m <- processIdRemove fpr
+  case m of
+    Nothing -> return ()
+    Just s -> putStrLn s
 
 process (Cli (CheckIn (CheckInCreate fpr))) = do
   putStrLn $ "CheckIn for " ++ fpr
