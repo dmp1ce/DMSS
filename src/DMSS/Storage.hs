@@ -40,6 +40,8 @@ import           Database.Persist.TH
 import           Data.Text ( pack
                            , Text
                            )
+import           Control.Monad.Logger (NoLoggingT)
+import           Control.Monad.Trans.Resource (ResourceT)
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 UserKey
@@ -61,21 +63,19 @@ dbConnectionString = localDirectory >>= \ld -> pure $ ld ++ "/dmss.sqlite"
 
 -- | Run Persistent migration
 migrateStorage :: IO [Text]
-migrateStorage = do
-  c <- dbConnectionString
-  runSqlite (pack c) $ runMigrationSilent migrateAll
+migrateStorage = runStorage $ runMigrationSilent migrateAll
 
 -- | Store UserKey information
 storeUserKey :: Fingerprint -- ^ UserKey Fingerprint
              -> IO (Key UserKey)
 storeUserKey (Fingerprint s) = do
   t <- getCurrentTimeInSeconds
-  dbConnectionString >>= \c -> runSqlite (pack c) $ insert $ UserKey s t
+  runStorage $ insert $ UserKey s t
 
 removeUserKey :: Fingerprint -- ^ UserKey Fingerprint
               -> IO ()
 removeUserKey (Fingerprint fpr) = do
-  dbConnectionString >>= \c -> runSqlite (pack c) $ do
+  runStorage $ do
     -- Delete all checkins associated with UserKey
     mUserKey <- getBy $ UniqueFingerprint fpr
     case mUserKey of
@@ -87,13 +87,16 @@ removeUserKey (Fingerprint fpr) = do
 -- | Get UserKey ID
 getUserKeyKey :: Fingerprint -- ^ UserKey Fingerprint
              -> IO (Maybe (Key UserKey))
-getUserKeyKey (Fingerprint fpr) = dbConnectionString >>= \c -> runSqlite (pack c) $ do
+getUserKeyKey fpr = runStorage $ getUserKeyKeyDBActions fpr
+
+-- | Underlying Database actions for getting UserKey Key
+getUserKeyKeyDBActions :: Fingerprint -> SqlPersistT (NoLoggingT (ResourceT IO)) (Maybe (Key UserKey))
+getUserKeyKeyDBActions (Fingerprint fpr) = do
   maybeUserKey <- getBy $ UniqueFingerprint fpr
   maybe
     (pure Nothing)
     (\(Entity userKeyId _) -> pure $ Just userKeyId)
     maybeUserKey
-
 
 -- | Store a CheckIn
 storeCheckIn :: Fingerprint   -- ^ Fingerprint of users key
@@ -101,18 +104,18 @@ storeCheckIn :: Fingerprint   -- ^ Fingerprint of users key
              -> IO (Either String (Key CheckIn))
 storeCheckIn fpr (CheckInProof rawCheckInData) = do
   t <- getCurrentTimeInSeconds
-  m <- getUserKeyKey fpr
-  dbConnectionString >>= \c -> runSqlite (pack c) $ maybe
-    (pure $ Left "Could not find users fingerprint in DB")
-    (\i -> do
-      res <- insert $ CheckIn i rawCheckInData t
-      pure $ Right res) m
+  runStorage $ do
+    m <- getUserKeyKeyDBActions fpr
+    maybe (pure $ Left "Could not find users fingerprint in DB")
+      (\i -> do
+        res <- insert $ CheckIn i rawCheckInData t
+        pure $ Right res) m
 
 -- | List the last `Int` checkins sorted by date 
 listCheckIns :: Int -> IO ([Entity CheckIn])
-listCheckIns i = dbConnectionString >>= \c -> runSqlite (pack c) $ do
+listCheckIns i = runStorage $ do
   s <- selectList [] [LimitTo i]
   return (s :: [Entity CheckIn])
 
---runStorage :: SqlPersistT (Control.Monad.Logger.NoLoggingT (ResourceT IO)) -> IO b 
---runStorage f = dbConnectionString >>= \c -> runSqlite (pack c) f
+runStorage :: SqlPersistT (NoLoggingT (ResourceT IO)) b -> IO b
+runStorage f = dbConnectionString >>= \c -> runSqlite (pack c) f

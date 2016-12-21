@@ -52,6 +52,8 @@ library
                    , text
                    , time
                    , transformers
+                   , monad-logger
+                   , resourcet
 
 executable dmss-cli
   default-language:  Haskell2010
