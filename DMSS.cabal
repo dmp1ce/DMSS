@@ -33,7 +33,8 @@ library
                    , DMSS.Command
                    , DMSS.Config
                    , DMSS.Storage
-                   , DMSS.Util
+                   , DMSS.Storage.Types
+                   , DMSS.Common
   build-depends:     base >= 4.8 && < 5
                    , daemons
                    , data-default
@@ -89,6 +90,7 @@ test-suite DMSS-test
                    , StorageTest
                    , CLITest
                    , ConfigTest
+                   , CommonTest
                    , Common
 
 test-suite DMSS-doctest

@@ -8,15 +8,6 @@
 --
 -- Dead Man Switch System storage module
 --
-{-# LANGUAGE EmptyDataDecls             #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE QuasiQuotes                #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeFamilies               #-}
 module DMSS.Storage ( storeCheckIn
                     , listCheckIns
                     , migrateStorage
@@ -31,32 +22,16 @@ module DMSS.Storage ( storeCheckIn
                     )
   where
 
-
 import           DMSS.Config ( localDirectory )
-import           DMSS.Util  ( getCurrentTimeInSeconds )
+import           DMSS.Common ( getCurrentTimeInSeconds )
+import           DMSS.Storage.Types
 
 import           Database.Persist.Sqlite
-import           Database.Persist.TH
 import           Data.Text ( pack
                            , Text
                            )
 import           Control.Monad.Logger (NoLoggingT)
 import           Control.Monad.Trans.Resource (ResourceT)
-
-share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
-UserKey
-  fingerprint String -- ^ Fingerprint of GPG key
-  UniqueFingerprint fingerprint
-  created Int -- ^ POSIX time
-CheckIn
-  userId UserKeyId
-  raw_data String
-  created Int -- ^ POSIX time
-  deriving Show
-|]
-
-newtype Fingerprint  = Fingerprint  { unFingerprint :: String }
-newtype CheckInProof = CheckInProof { unCheckInProof :: String }
 
 dbConnectionString :: IO String
 dbConnectionString = localDirectory >>= \ld -> pure $ ld ++ "/dmss.sqlite"
