@@ -31,23 +31,24 @@ import qualified  Text.PrettyPrint       as PP
 processIdCreate :: String         -- ^ Name
                 -> Maybe String   -- ^ Email
                 -> IO String      -- ^ CLI output
-processIdCreate n e = do
-  -- Create GPG id
-  l <- gpgContext
-  let params = (def :: G.GenKeyParams)
-        { G.keyType = Just Dsa
-        , G.nameReal = C.pack n
-        , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
-        }
-  createLocalDirectory
-  ret <- withCtx l "C" OpenPGP $ \ctx -> do
-    eitherFpr <- G.genKey ctx params
-    either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
-      (\fpr -> do
-          s <- storeUserKey $ Fingerprint $ C.unpack fpr
-          return $ show s)
-      eitherFpr
-  return $ show ret
+processIdCreate n e = runStderrLoggingT $ withSqlitePool dbConnectionString 10 $ \pool -> liftIO $ do
+  flip runSqlPersistMPool pool $ do
+    -- Create GPG id
+    l <- gpgContext
+    let params = (def :: G.GenKeyParams)
+          { G.keyType = Just Dsa
+          , G.nameReal = C.pack n
+          , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
+          }
+    createLocalDirectory
+    ret <- withCtx l "C" OpenPGP $ \ctx -> do
+      eitherFpr <- G.genKey ctx params
+      either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
+        (\fpr -> do
+            s <- storeUserKey $ Fingerprint $ C.unpack fpr
+            return $ show s)
+        eitherFpr
+    return $ show ret
 
 -- | List the existing use IDs
 processIdList :: IO String
