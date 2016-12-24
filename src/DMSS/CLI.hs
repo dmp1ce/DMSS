@@ -22,7 +22,9 @@ import DMSS.Storage ( storeCheckIn
 import Crypto.Gpgme
 
 import System.Daemon (runClient)
+import System.Environment (setEnv)
 import Options.Applicative
+import Data.Monoid ((<>))
 import qualified Data.ByteString.Char8   as C
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , softline
@@ -30,10 +32,15 @@ import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    )
 
 data Cli = Cli
-  { optCommand :: Command }
+  { optHomedir :: Maybe String
+  , optCommand :: Command }
 
 cliParser :: Parser Cli
-cliParser = Cli <$> idParser
+cliParser = Cli <$> (optional $ strOption ( long "homedir"
+                                        <> metavar "DIRECTORY"
+                                        <> help "Change home directory"
+                                         ))
+                <*> idParser
 
 idParser :: Parser Command
 idParser = hsubparser
@@ -80,19 +87,24 @@ idCommandParser = hsubparser
      <> help "Email of ID" )
 
 process :: Cli -> IO ()
-process (Cli (Id (IdCreate Nothing e))) = do
+process (Cli (Just homeStr) c) = do
+  -- Set home directory
+  setEnv "HOME" homeStr
+  process (Cli Nothing c)
+
+process (Cli Nothing (Id (IdCreate Nothing e))) = do
   putStrLn "Please enter the name for the ID:"
   n <- getLine
-  process $ Cli $ Id $ IdCreate (Just n) e
-process (Cli (Id (IdCreate (Just n) e))) = processIdCreate n e >>= putStrLn
-process (Cli (Id IdList)) = processIdList >>= putStrLn
-process (Cli (Id (IdRemove fpr))) = do
+  process $ Cli Nothing $ Id $ IdCreate (Just n) e
+process (Cli Nothing (Id (IdCreate (Just n) e))) = processIdCreate n e >>= putStrLn
+process (Cli Nothing (Id IdList)) = processIdList >>= putStrLn
+process (Cli Nothing (Id (IdRemove fpr))) = do
   m <- processIdRemove fpr
   case m of
     Nothing -> return ()
     Just s -> putStrLn s
 
-process (Cli (CheckIn (CheckInCreate fpr))) = do
+process (Cli Nothing (CheckIn (CheckInCreate fpr))) = do
   putStrLn $ "CheckIn for " ++ fpr
   l <- gpgContext
   eitherCT <- withCtx l "C" OpenPGP $ \ctx -> do
@@ -103,13 +115,13 @@ process (Cli (CheckIn (CheckInCreate fpr))) = do
   _ <- storeCheckIn (Fingerprint fpr) (CheckInProof $ C.unpack ct)
   return ()
 
-process (Cli (CheckIn _)) = do
+process (Cli Nothing (CheckIn _)) = do
   putStrLn "CheckIn command here"
 
-process (Cli Status) = do
+process (Cli Nothing Status) = do
   res <- runCommand Status
   print (res :: Maybe String)
-process (Cli Version) = do
+process (Cli Nothing Version) = do
   putStrLn $ "CLI version: " ++ cliVersion
   res <- runCommand Version
   print (res :: Maybe String)
