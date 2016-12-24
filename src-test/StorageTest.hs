@@ -25,7 +25,7 @@ tempDir :: FilePath
 tempDir = "storageTest"
 
 storeUserKeyTest :: Assertion
-storeUserKeyTest = withTemporaryTestStorage tempDir ( \_ -> do
+storeUserKeyTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Store fake user key
     let fpr = Fingerprint "hello1234"
     _ <- storeUserKey fpr
@@ -38,7 +38,7 @@ storeUserKeyTest = withTemporaryTestStorage tempDir ( \_ -> do
   )
 
 removeUserKeyTest :: Assertion
-removeUserKeyTest = withTemporaryTestStorage tempDir ( \_ -> do
+removeUserKeyTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Store fake user key
     let fpr = Fingerprint "deleteMe1234"
     _ <- storeUserKey fpr
@@ -54,7 +54,7 @@ removeUserKeyTest = withTemporaryTestStorage tempDir ( \_ -> do
   )
 
 storeCheckInTest :: Assertion
-storeCheckInTest = withTemporaryTestStorage tempDir ( \_ -> do
+storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Store a checkin
     let fpr = Fingerprint "MyFingerprint"
     _ <- storeUserKey fpr

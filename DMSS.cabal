@@ -84,7 +84,8 @@ test-suite DMSS-test
                    , tasty-smallcheck >= 0.8
                    , silently
                    , temporary
-                   , directory
+                   , directory >= 1.2.5
+                   , filepath
                    , DMSS
   other-modules:     DaemonTest
                    , StorageTest

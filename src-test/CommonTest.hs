@@ -15,7 +15,7 @@ tempDir :: FilePath
 tempDir = "commonTest"
 
 verifyCheckIn :: Assertion
-verifyCheckIn = withTemporaryTestStorage tempDir ( \_ -> do
+verifyCheckIn = withTemporaryAliceHome tempDir ( \_ -> do
     -- Create user
     -- Create checkin
     -- Get last checkin

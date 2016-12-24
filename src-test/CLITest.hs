@@ -18,7 +18,7 @@ tempDir :: FilePath
 tempDir = "cliTest"
 
 createUserTest :: Assertion
-createUserTest = withTemporaryTestStorage tempDir ( \_ -> do
+createUserTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Simulate a create user command.
     -- For example: dmss-cli id create -n "joe blow"
     _ <- processIdCreate "joe blow" $ Just "joeblow@example.com"
@@ -29,7 +29,7 @@ createUserTest = withTemporaryTestStorage tempDir ( \_ -> do
   )
 
 removeUserTest :: Assertion
-removeUserTest = withTemporaryTestStorage tempDir ( \_ -> do
+removeUserTest = withTemporaryAliceHome tempDir ( \_ -> do
     -- Simulate a create user and then removing a user.
     -- For example:
     --   $ dmss-cli id create -n "donald_trump"
@@ -37,11 +37,14 @@ removeUserTest = withTemporaryTestStorage tempDir ( \_ -> do
     --   NAME           EMAIL                         FINGERPRINT
     --   donald_trum...                               D8F162CB21A2A66BC75A4E6DC07272592E46EA59
     --   $ dmss-cli id remove D8F162CB21A2A66BC75A4E6DC07272592E46EA59
-    _ <- processIdCreate "donald_trump" $ Just "donaldt@example.com"
+    --_ <- processIdCreate "donald_trump" $ Just "donaldt@example.com"
+
+    -- Instead of generating a new key use Alice's pre-generated environment
 
     -- Get the fingerprint from result of `processIdList`
     l <- processIdList
-    let fpr = words ((lines l) !! 1) !! 2
+
+    let fpr = words ((lines l) !! 1) !! 1
 
     -- Remove the created user ID
     _ <- processIdRemove fpr
