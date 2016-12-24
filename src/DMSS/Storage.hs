@@ -10,7 +10,6 @@
 --
 module DMSS.Storage ( storeCheckIn
                     , listCheckIns
-                    , migrateStorage
                     , storeUserKey
                     , getUserKeyKey
                     , removeUserKey
@@ -28,17 +27,17 @@ import           DMSS.Storage.Types
 
 import           Database.Persist.Sqlite
 import           Data.Text ( pack
-                           , Text
+                           , unpack
                            )
-import           Control.Monad.Logger (NoLoggingT)
-import           Control.Monad.Trans.Resource (ResourceT)
+
+import           Control.Monad.IO.Class ( liftIO )
+import           Control.Monad.Logger ( NoLoggingT
+                                      , runStdoutLoggingT
+                                      )
+import           Control.Monad.Trans.Resource ( ResourceT )
 
 dbConnectionString :: IO String
 dbConnectionString = localDirectory >>= \ld -> pure $ ld ++ "/dmss.sqlite"
-
--- | Run Persistent migration
-migrateStorage :: IO [Text]
-migrateStorage = runStorage $ runMigrationSilent migrateAll
 
 -- | Store UserKey information
 storeUserKey :: Fingerprint -- ^ UserKey Fingerprint
@@ -60,9 +59,11 @@ removeUserKey (Fingerprint fpr) = do
     deleteBy $ UniqueFingerprint fpr
 
 -- | Get UserKey ID
-getUserKeyKey :: Fingerprint -- ^ UserKey Fingerprint
-             -> IO (Maybe (Key UserKey))
-getUserKeyKey fpr = runStorage $ getUserKeyKeyDBActions fpr
+getUserKeyKey :: Silent      -- ^ is silent and no pool?
+              -> Fingerprint -- ^ UserKey Fingerprint
+              -> IO (Maybe (Key UserKey))
+getUserKeyKey (Silent True) fpr = runStorage $ getUserKeyKeyDBActions fpr
+getUserKeyKey (Silent False) fpr = runStoragePool $ getUserKeyKeyDBActions fpr
 
 -- | Underlying Database actions for getting UserKey Key
 getUserKeyKeyDBActions :: Fingerprint -> SqlPersistT (NoLoggingT (ResourceT IO)) (Maybe (Key UserKey))
@@ -92,5 +93,16 @@ listCheckIns i = runStorage $ do
   s <- selectList [] [LimitTo i]
   return (s :: [Entity CheckIn])
 
-runStorage :: SqlPersistT (NoLoggingT (ResourceT IO)) b -> IO b
-runStorage f = dbConnectionString >>= \c -> runSqlite (pack c) f
+-- | Run storage actions with no logging, no pooling and silent migration
+runStorage :: SqlPersistT (NoLoggingT (ResourceT IO)) a -> IO a
+runStorage action = dbConnectionString >>= \c -> runSqlite (pack c) $ do
+  _ <- runMigrationSilent migrateAll
+  action
+
+-- | Run storage actions with stdout logging, pooling and stdout migration
+runStoragePool :: SqlPersistT (NoLoggingT (ResourceT IO)) a -> IO a
+runStoragePool action = dbConnectionString >>= \c -> runStdoutLoggingT $ withSqlitePool (pack c) 10 $ \pool -> liftIO $ do
+  flip runSqlPersistMPool pool $ do
+    stuff <- runMigrationSilent migrateAll
+    liftIO $ mapM_ (putStrLn . unpack) stuff
+    action

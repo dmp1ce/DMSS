@@ -31,8 +31,7 @@ import qualified  Text.PrettyPrint       as PP
 processIdCreate :: String         -- ^ Name
                 -> Maybe String   -- ^ Email
                 -> IO String      -- ^ CLI output
-processIdCreate n e = runStderrLoggingT $ withSqlitePool dbConnectionString 10 $ \pool -> liftIO $ do
-  flip runSqlPersistMPool pool $ do
+processIdCreate n e = do
     -- Create GPG id
     l <- gpgContext
     let params = (def :: G.GenKeyParams)

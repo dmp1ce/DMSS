@@ -36,3 +36,4 @@ CheckIn
 
 newtype Fingerprint  = Fingerprint  { unFingerprint :: String }
 newtype CheckInProof = CheckInProof { unCheckInProof :: String }
+newtype Silent = Silent { unSilent :: Bool }
