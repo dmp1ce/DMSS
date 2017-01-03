@@ -25,7 +25,8 @@ import           DMSS.Config ( localDirectory )
 import           DMSS.Common ( getCurrentTimeInSeconds )
 import           DMSS.Storage.Types
 
-import           Database.Persist.Sqlite
+import qualified Database.Persist.Sqlite as P
+import           Database.Esqueleto
 import           Data.Text ( pack
                            , unpack
                            )
@@ -54,7 +55,7 @@ removeUserKey (Fingerprint fpr) = do
     mUserKey <- getBy $ UniqueFingerprint fpr
     case mUserKey of
       Nothing  -> error "Couldn't find UserKey"
-      (Just uk) -> deleteWhere [ UserKeyId ==. (entityKey uk) ]
+      (Just uk) -> P.deleteWhere [ UserKeyId P.==. (entityKey uk) ]
     -- Then delete UserKey
     deleteBy $ UniqueFingerprint fpr
 
@@ -88,20 +89,27 @@ storeCheckIn fpr (CheckInProof rawCheckInData) = do
         pure $ Right res) m
 
 -- | List the last `Int` checkins sorted by date 
-listCheckIns :: Int -> IO ([Entity CheckIn])
-listCheckIns i = runStorage $ do
-  s <- selectList [] [LimitTo i]
+listCheckIns :: Fingerprint -> Int -> IO [Entity CheckIn]
+listCheckIns (Fingerprint fpr) i = runStorage $ do
+  s <- select $
+         from $ \(u, c) -> do
+           where_ ( u ^. UserKeyFingerprint ==. val fpr
+                &&. u ^. UserKeyId ==. c ^. CheckInUserId
+                  )
+           limit (toEnum i)
+           orderBy [desc (c ^. CheckInCreated)]
+           return c
   return (s :: [Entity CheckIn])
 
 -- | Run storage actions with no logging, no pooling and silent migration
 runStorage :: SqlPersistT (NoLoggingT (ResourceT IO)) a -> IO a
-runStorage action = dbConnectionString >>= \c -> runSqlite (pack c) $ do
+runStorage action = dbConnectionString >>= \c -> P.runSqlite (pack c) $ do
   _ <- runMigrationSilent migrateAll
   action
 
 -- | Run storage actions with stdout logging, pooling and stdout migration
 runStoragePool :: SqlPersistT (NoLoggingT (ResourceT IO)) a -> IO a
-runStoragePool action = dbConnectionString >>= \c -> runStdoutLoggingT $ withSqlitePool (pack c) 10 $ \pool -> liftIO $ do
+runStoragePool action = dbConnectionString >>= \c -> runStdoutLoggingT $ P.withSqlitePool (pack c) 10 $ \pool -> liftIO $ do
   flip runSqlPersistMPool pool $ do
     stuff <- runMigrationSilent migrateAll
     liftIO $ mapM_ (putStrLn . unpack) stuff

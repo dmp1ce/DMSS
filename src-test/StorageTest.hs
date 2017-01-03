@@ -14,6 +14,9 @@ import DMSS.Storage ( getUserKeyKey
 
 import Common
 
+import qualified Database.Persist.Sqlite as P
+import Data.List
+
 tests :: [TestTree]
 tests =
   [ testCase "store_user_key_test" storeUserKeyTest
@@ -63,9 +66,18 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
       (Left s) -> assertFailure s
       _ -> return ()
     -- Get a list of checkins
-    l <- listCheckIns 10
+    l <- listCheckIns fpr 10
     -- Verify that only one checkin was returned
     case l of
       (_:[])    -> return ()
       x         -> assertFailure $ "Did not find one checkin: " ++ show x
+
+    -- Create another checkin and verify order is correct
+    _ <- storeCheckIn fpr (CheckInProof "More proof")
+    _ <- storeCheckIn fpr (CheckInProof "Even more proof")
+    l' <- listCheckIns fpr 10
+    let createdList = map (\x -> checkInCreated $ P.entityVal x) l'
+    if createdList == (reverse . sort) createdList
+      then return ()
+      else assertFailure "CheckIns were not in decending order"
   )

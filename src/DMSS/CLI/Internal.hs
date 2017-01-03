@@ -15,7 +15,9 @@ module DMSS.CLI.Internal where
 import DMSS.Config
 import DMSS.Storage ( storeUserKey
                     , removeUserKey
+                    , storeCheckIn
                     , Fingerprint (..)
+                    , CheckInProof (..)
                     )
 
 import Crypto.Gpgme
@@ -32,24 +34,24 @@ processIdCreate :: String         -- ^ Name
                 -> Maybe String   -- ^ Email
                 -> IO String      -- ^ CLI output
 processIdCreate n e = do
-    -- Create GPG id
-    l <- gpgContext
-    let params = (def :: G.GenKeyParams)
-          { G.keyType = Just Dsa
-          , G.nameReal = C.pack n
-          , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
-          }
-    createLocalDirectory
-    ret <- withCtx l "C" OpenPGP $ \ctx -> do
-      eitherFpr <- G.genKey ctx params
-      either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
-        (\fpr -> do
-            s <- storeUserKey $ Fingerprint $ C.unpack fpr
-            return $ show s)
-        eitherFpr
-    return $ show ret
+  -- Create GPG id
+  l <- gpgContext
+  let params = (def :: G.GenKeyParams)
+        { G.keyType = Just Dsa
+        , G.nameReal = C.pack n
+        , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
+        }
+  createLocalDirectory
+  ret <- withCtx l "C" OpenPGP $ \ctx -> do
+    eitherFpr <- G.genKey ctx params
+    either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
+      (\fpr -> do
+          s <- storeUserKey $ Fingerprint $ C.unpack fpr
+          return $ show s)
+      eitherFpr
+  return $ show ret
 
--- | List the existing use IDs
+-- | List the existing user IDs
 processIdList :: IO String
 processIdList = do
   l <- gpgContext
@@ -97,3 +99,15 @@ processIdRemove fpr = do
   case ret of
     Nothing  -> return $ Nothing
     (Just e) -> return $ Just $ show e
+
+processCheckInCreate :: String -- ^ Fingerprint
+                     -> IO ()
+processCheckInCreate fpr = do
+  l <- gpgContext
+  eitherCT <- withCtx l "C" OpenPGP $ \ctx -> do
+    maybeKey <- getKey ctx (C.pack fpr) WithSecret
+    let key = maybe (error ("Invalid key id " ++ fpr)) id maybeKey
+    sign ctx [key] Clear (C.pack "Logged in at this date 2016-12-07")
+  let ct = either (\e -> error $ show e) id eitherCT
+  _ <- storeCheckIn (Fingerprint fpr) (CheckInProof $ C.unpack ct)
+  return ()

@@ -6,20 +6,29 @@ import Test.Tasty.HUnit
 
 import Common
 
+import DMSS.CLI.Internal
+import DMSS.Storage
+import DMSS.Common
+
 tests :: [TestTree]
 tests =
-  [ testCase "verify_checkin" verifyCheckIn
+  [ testCase "verify_checkin_prompt" verifyCheckInTest
   ]
 
 tempDir :: FilePath
 tempDir = "commonTest"
 
-verifyCheckIn :: Assertion
-verifyCheckIn = withTemporaryAliceHome tempDir ( \_ -> do
-    -- Create user
+verifyCheckInTest :: Assertion
+verifyCheckInTest = withTemporaryAliceHome tempDir ( \_ -> do
+    let fpr = "EF86E97B41918B7E7E939FA7DAD31A050AC8E53E"
     -- Create checkin
+    processCheckInCreate fpr
     -- Get last checkin
-    -- Verify checkin
-    assertFailure "Not implemented"
-  )
+    l <- listCheckIns (Fingerprint fpr) 1
+    --print l
+    let checkIn = head l
 
+    -- Verify checkin
+    verifyRes <- verifyCheckIn (Fingerprint fpr) checkIn
+    assertBool "CheckIn was not verified" verifyRes
+  )

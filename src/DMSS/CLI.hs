@@ -12,20 +12,12 @@
 module DMSS.CLI where
 
 import DMSS.Command
-import DMSS.Config
 import DMSS.CLI.Internal
-import DMSS.Storage ( storeCheckIn
-                    , Fingerprint (..)
-                    , CheckInProof (..)
-                    )
-
-import Crypto.Gpgme
 
 import System.Daemon (runClient)
 import System.Environment (setEnv)
 import Options.Applicative
 import Data.Monoid ((<>))
-import qualified Data.ByteString.Char8   as C
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , softline
                                                    , (<$>)
@@ -104,19 +96,11 @@ process (Cli Nothing (Id (IdRemove fpr))) = do
     Nothing -> return ()
     Just s -> putStrLn s
 
-process (Cli Nothing (CheckIn (CheckInCreate fpr))) = do
-  putStrLn $ "CheckIn for " ++ fpr
-  l <- gpgContext
-  eitherCT <- withCtx l "C" OpenPGP $ \ctx -> do
-    maybeKey <- getKey ctx (C.pack fpr) WithSecret
-    let key = maybe (error ("Invalid key id " ++ fpr)) id maybeKey
-    clearSign ctx [key] (C.pack "Logged in at this date 2016-12-07")
-  let ct = either (\e -> error $ show e) id eitherCT
-  _ <- storeCheckIn (Fingerprint fpr) (CheckInProof $ C.unpack ct)
-  return ()
+process (Cli Nothing (CheckIn (CheckInCreate fpr))) =
+  processCheckInCreate fpr
 
-process (Cli Nothing (CheckIn _)) = do
-  putStrLn "CheckIn command here"
+process (Cli Nothing (CheckIn CheckInList)) = do
+  putStrLn "CheckIn List command here"
 
 process (Cli Nothing Status) = do
   res <- runCommand Status

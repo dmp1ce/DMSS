@@ -39,11 +39,6 @@ withTemporaryAliceHome t func = withTemporaryTestDirectory t ( \tmpDir -> do
                           (tmpDir </> ".local/share/dmss/gpg/openpgp-revocs.d" </> f)
                    ) revocsFiles
 
-    dmssFiles <- listDirectory $ tmpDir </> ".local/share/dmss"
-    gpgFiles <- listDirectory  $ tmpDir </> ".local/share/dmss/gpg"
-    print dmssFiles
-    print gpgFiles
-
     func tmpDir
   )
 

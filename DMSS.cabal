@@ -55,6 +55,7 @@ library
                    , transformers
                    , monad-logger
                    , resourcet
+                   , esqueleto
 
 executable dmss-cli
   default-language:  Haskell2010
@@ -86,6 +87,7 @@ test-suite DMSS-test
                    , temporary
                    , directory >= 1.2.5
                    , filepath
+                   , persistent-sqlite
                    , DMSS
   other-modules:     DaemonTest
                    , StorageTest
