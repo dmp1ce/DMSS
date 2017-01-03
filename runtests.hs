@@ -28,9 +28,9 @@ main = do
     UserInput False str     -> runTestsWithPrompt str
     UserInput True  str     -> runTestsWithoutPrompt str
   where
-    runTestsWithPrompt Nothing       = shell "stack test" empty
-    runTestsWithPrompt (Just s')     = shell (format ("stack test --test-arguments \"-p "%s%"\"") s') empty
-    runTestsWithoutPrompt Nothing    = shell "stack test --test-arguments \"-p !**/*_prompt*\"" empty
+    runTestsWithPrompt Nothing       = shell "stack test :DMSS-test" empty
+    runTestsWithPrompt (Just s')     = shell (format ("stack test :DMSS-test --test-arguments \"-p "%s%"\"") s') empty
+    runTestsWithoutPrompt Nothing    = shell "stack test :DMSS-test --test-arguments \"-p !**/*_prompt*\"" empty
     runTestsWithoutPrompt (Just s')  = do
       echo (format ("Ignoring '-n' argument ("%s%") because string argument was specified") s')
       runTestsWithPrompt (Just s')
