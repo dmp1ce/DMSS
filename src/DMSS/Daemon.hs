@@ -12,7 +12,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module DMSS.Daemon where
 
-import DMSS.Command
+import DMSS.Daemon.Command
 import DMSS.Config
 
 import Data.Default (def, Default)
@@ -27,7 +27,6 @@ type Response = String
 checkerDaemon :: Command -> IO Response
 checkerDaemon Status  = return "Daemon is running!"
 checkerDaemon Version = return $ "Daemon version: " ++ daemonVersion
-checkerDaemon _       = return "Not a valid command"
 
 data Options = Options
   { daemonSilent :: Bool }

@@ -28,9 +28,10 @@ library
   ghc-options:       -Wall -Werror -O2
   hs-source-dirs:    src
   exposed-modules:   DMSS.Daemon
+                   , DMSS.Daemon.Command
                    , DMSS.CLI
                    , DMSS.CLI.Internal
-                   , DMSS.Command
+                   , DMSS.CLI.Command
                    , DMSS.Config
                    , DMSS.Storage
                    , DMSS.Storage.Types

@@ -11,13 +11,14 @@
 
 module DMSS.CLI where
 
-import DMSS.Command
-import DMSS.CLI.Internal
+import           DMSS.CLI.Command
+import qualified DMSS.Daemon.Command as DCLI
+import           DMSS.CLI.Internal
 
-import System.Daemon (runClient)
-import System.Environment (setEnv)
-import Options.Applicative
-import Data.Monoid ((<>))
+import           System.Daemon (runClient)
+import           System.Environment (setEnv)
+import           Options.Applicative
+import           Data.Monoid ((<>))
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , softline
                                                    , (<$>)
@@ -103,14 +104,14 @@ process (Cli Nothing (CheckIn CheckInList)) = do
   putStrLn "CheckIn List command here"
 
 process (Cli Nothing Status) = do
-  res <- runCommand Status
+  res <- runCommand DCLI.Status
   print (res :: Maybe String)
 process (Cli Nothing Version) = do
   putStrLn $ "CLI version: " ++ cliVersion
-  res <- runCommand Version
+  res <- runCommand DCLI.Version
   print (res :: Maybe String)
 
-runCommand :: Command -> IO (Maybe String)
+runCommand :: DCLI.Command -> IO (Maybe String)
 runCommand c = runClient "localhost" 5000 c
 
 cliMain :: IO ()

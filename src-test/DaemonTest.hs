@@ -8,7 +8,7 @@ import Control.Concurrent
 
 import DMSS.Daemon  ( daemonMain, defaultOptions, daemonSilent )
 import DMSS.CLI     ( runCommand )
-import DMSS.Command ( Command (Status) )
+import DMSS.Daemon.Command ( Command (Status) )
 
 tests :: [TestTree]
 tests =
