@@ -4,7 +4,7 @@ High level overview on how the the DMSS (Dead Man's Switch System) works.
 
 # Motiviation
 
-As secret knowledge known by only one individual becomes more valuable with the adventent of technologies Bitcoin, online identities protected by a unique password, or simply the fear of persecution for disclosing secrets, the problem exists for how to pass on those secrets once the individual dies or is mentally incapacitated. The motiviation of this design document is to describe how to securely and reliably share secrets to trusted individuals in the event that the secret owner dies.
+As secret knowledge known by only one individual becomes more valuable with the adventent of technologies Bitcoin, online identities protected by a unique password, or simply the fear of persecution for disclosing secrets, the problem exists for how to pass on those secrets once the individual dies or is mentally incapacitated. The motiviation of this design document is to describe how to securely and reliably share secrets to trusted individuals if the secret owner dies.
 
 # Overview using an example
 
