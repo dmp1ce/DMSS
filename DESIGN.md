@@ -1,6 +1,6 @@
 # Dead Man's Switch System design document
 
-High level overview on how the the DMSS (Dead Man's Switch System) works.
+High level overview on how the DMSS (Dead Man's Switch System) works.
 
 # Motiviation
 
