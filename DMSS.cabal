@@ -26,7 +26,7 @@ source-repository head
 library
   default-language:  Haskell2010
   ghc-options:       -Wall -Werror -O2
-  hs-source-dirs:    src
+  hs-source-dirs:    src-lib
   exposed-modules:   DMSS.Daemon
                    , DMSS.Daemon.Command
                    , DMSS.CLI
@@ -58,19 +58,19 @@ library
                    , resourcet
                    , esqueleto
 
-executable dmss-cli
+executable dmss
   default-language:  Haskell2010
   ghc-options:       -Wall -Werror -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
-  hs-source-dirs:    src-exe-cli
-  main-is:           Main.hs
+  hs-source-dirs:    src-bin
+  main-is:           dmss.hs
   build-depends:     base >= 4.8 && < 5
                    , DMSS
 
 executable dmssd
   default-language:  Haskell2010
   ghc-options:       -Wall -Werror -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
-  hs-source-dirs:    src-exe-daemon
-  main-is:           Main.hs
+  hs-source-dirs:    src-bin
+  main-is:           dmssd.hs
   build-depends:     base >= 4.8 && < 5
                    , DMSS
 
@@ -101,8 +101,8 @@ test-suite DMSS-doctest
   type:              exitcode-stdio-1.0
   default-language:  Haskell2010
   ghc-options:       -Wall -Werror -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
-  hs-source-dirs:    src-doctest
-  main-is:           Main.hs
+  hs-source-dirs:    src-bin
+  main-is:           DMSS-doctest.hs
   build-depends:     base >= 4.8 && < 5
                    , doctest >=0.10
                    , Glob >= 0.7
@@ -113,8 +113,8 @@ benchmark DMSS-benchmark
   type:              exitcode-stdio-1.0
   default-language:  Haskell2010
   ghc-options:       -Wall -Werror -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
-  hs-source-dirs:    src-benchmark
-  main-is:           Main.hs
+  hs-source-dirs:    src-bin
+  main-is:           DMSS-benchmark.hs
   build-depends:     base >= 4.8 && < 5
                    , criterion >= 1.1
                    , DMSS
