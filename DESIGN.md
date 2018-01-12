@@ -4,11 +4,11 @@ High level overview on how the DMSS (Dead Man's Switch System) works.
 
 # Motiviation
 
-As secret knowledge known by only one individual becomes more valuable with the adventent of technologies Bitcoin, online identities protected by a unique password, or simply the fear of persecution for disclosing secrets, the problem exists for how to pass on those secrets once the individual dies or is mentally incapacitated. The motiviation of this design document is to describe how to securely and reliably share secrets to trusted individuals if the secret owner dies.
+We are in the midst of a migration of secret identifying information into digital and/or online forms. Examples of this would be cryptocurrency wallet keys, password login information and other cryptographic key data. The problem exists of how to pass this information along to trusted parties in the event of emergency or even death. The motivation behind this project is to design and implement an automated system for securely and reliably sharing secrets to trusted individuals as it becomes necessary.
 
 # Overview using an example
 
-DMSS consites of at least three components.
+DMSS consists of at least three components.
 
 - Owner
 - Medium for transporting messages
@@ -38,17 +38,17 @@ This is only an example. The example could have more or less trustees and the me
                 +-------+
 ```
 
-Alice is responsible for setting up the system and creating the documents that will be given to the trustees at her death.
+Alice is responsible for setting up the system and creating the documents that will be given to the trustees when one or more of the trigger conditions is met.
 
-Bob, Charlie and Dana are responsible for constructing and decrypting the data when Alice dies.
+Bob, Charlie and Dana are responsible for constructing and decrypting the data when they're notified by the DMSS system.
 
-The email system is how the four parties setup new switches and how the trustees communicated when constructing information required to decrypt the encrypted secrets.
+The email system is how the four parties set up new switches and how the trustees communicated when constructing information required to gain access to the encrypted secrets.
 
 ## Setup
 
-To setup the switch, Alice would first determine what the secret information is that she wants to transfer on her death. She also needs to create a document which describes how to use the information.
+To setup the switch, Alice would first determine what the secret information is that she wants to transfer. She also needs to create a document which describes how to use the information.
 
-Alice then needs to choose at least one trustee which will receive the information. In this example she has choosen Bob, Charlie and Dana. Once Alice has the secret documents and the trustees she can now secure the secret and distrubute the decryption key to the trustees. This process involves the following steps:
+Alice then needs to choose at least one trustee which will receive the information. In this example she has choosen Bob, Charlie and Dana. Once Alice has the secret documents and the trustees she can now secure the secret and distribute the decryption key to the trustees. This process involves the following steps:
 
 1. Generate symetric passphrase
 2. Encrypt secret documents with symetric passphrase
@@ -63,14 +63,14 @@ All files and messages distributed to trustees are end-to-end encrypted with onl
 
 ## Maintenance checks
 
-After the setup and for the majority of the life of the DMSS, Alice will need to check that everyone has everything they need to receive the infromation on death.
+After the setup and for the majority of the life of the DMSS, Alice will need to check that everyone has everything they need to decrypt the infromation should the need arise.
 
 Maintenance checks include the following:
 
-- Verify all trustees can communicated with each other securely
+- Verify all trustees can communicate with each other securely
 - Verify all symetric passphrase parts are still available and not corrupted
 - Verify encrypted documents still exist and are not corrupted
-- Verify owner is still alive by signing messages which is only possible for owner
+- Verify owner still approves of secracy by signing messages which is only possible for owner
 - Trigger test switches from time to time to verify system is working and to train trustees on how to use the system
 
 Maintenance is very important to have some confidence that the secret information will be transfered at the time of death.
