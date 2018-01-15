@@ -1,10 +1,12 @@
 #!/usr/bin/env stack
 -- stack --install-ghc runghc --package turtle
 
+
 {-
 Run DMSS tests specified
 -}
 
+{-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import Turtle
@@ -32,5 +34,5 @@ main = do
     runTestsWithPrompt (Just s')     = shell (format ("stack test :DMSS-test --test-arguments \"-p "%s%"\"") s') empty
     runTestsWithoutPrompt Nothing    = shell "stack test :DMSS-test --test-arguments \"-p !**/*_prompt*\"" empty
     runTestsWithoutPrompt (Just s')  = do
-      echo (format ("Ignoring '-n' argument ("%s%") because string argument was specified") s')
+      printf ("Ignoring '-n' argument ("%s%") because string argument was specified") s'
       runTestsWithPrompt (Just s')
