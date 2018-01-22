@@ -29,27 +29,28 @@ createUserTest = withTemporaryTestDirectory tempDir ( \_ -> do
   )
 
 removeUserTest :: Assertion
-removeUserTest = withTemporaryAliceHome tempDir ( \_ -> do
-    -- Simulate a create user and then removing a user.
-    -- For example:
-    --   $ dmss-cli id create -n "donald_trump"
-    --   $ dmss-cli id list
-    --   NAME           EMAIL                         FINGERPRINT
-    --   donald_trum...                               D8F162CB21A2A66BC75A4E6DC07272592E46EA59
-    --   $ dmss-cli id remove D8F162CB21A2A66BC75A4E6DC07272592E46EA59
-    --_ <- processIdCreate "donald_trump" $ Just "donaldt@example.com"
+removeUserTest = undefined
+  --withTemporaryAliceHome tempDir ( \_ -> do
+  --  -- Simulate a create user and then removing a user.
+  --  -- For example:
+  --  --   $ dmss-cli id create -n "donald_trump"
+  --  --   $ dmss-cli id list
+  --  --   NAME           EMAIL                         FINGERPRINT
+  --  --   donald_trum...                               D8F162CB21A2A66BC75A4E6DC07272592E46EA59
+  --  --   $ dmss-cli id remove D8F162CB21A2A66BC75A4E6DC07272592E46EA59
+  --  --_ <- processIdCreate "donald_trump" $ Just "donaldt@example.com"
 
-    -- Instead of generating a new key use Alice's pre-generated environment
+  --  -- Instead of generating a new key use Alice's pre-generated environment
 
-    -- Get the fingerprint from result of `processIdList`
-    l <- processIdList
+  --  -- Get the fingerprint from result of `processIdList`
+  --  l <- processIdList
 
-    let fpr = words ((lines l) !! 1) !! 1
+  --  let fpr = words ((lines l) !! 1) !! 1
 
-    -- Remove the created user ID
-    _ <- processIdRemove fpr
+  --  -- Remove the created user ID
+  --  _ <- processIdRemove fpr
 
-    -- Simply check that only the header is returned from user ID list
-    l' <- processIdList
-    length (lines l') @?= 1
-  )
+  --  -- Simply check that only the header is returned from user ID list
+  --  l' <- processIdList
+  --  length (lines l') @?= 1
+  --)

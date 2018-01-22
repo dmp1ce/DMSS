@@ -12,102 +12,82 @@
 
 module DMSS.CLI.Internal where
 
-import DMSS.Config
-import DMSS.Storage ( storeUserKey
-                    , removeUserKey
-                    , storeCheckIn
-                    , Fingerprint (..)
-                    , CheckInProof (..)
-                    )
+--import DMSS.Config
+--import DMSS.Storage ( storeUserKey
+--                    , removeUserKey
+--                    , storeCheckIn
+--                    , Fingerprint (..)
+--                    , CheckInProof (..)
+--                    )
 
-import Crypto.Gpgme
-import qualified  Crypto.Gpgme.Key.Gen   as G
-
-import Data.Maybe (fromJust)
-import Text.Email.Validate
-import Data.Default (def)
-import qualified Data.ByteString.Char8   as C
-import qualified  Text.PrettyPrint       as PP
+--import Data.Maybe (fromJust)
+--import Text.Email.Validate
+--import Data.Default (def)
+--import qualified Data.ByteString.Char8   as C
+--import qualified  Text.PrettyPrint       as PP
 
 -- | Create a user ID
 processIdCreate :: String         -- ^ Name
                 -> Maybe String   -- ^ Email
                 -> IO String      -- ^ CLI output
-processIdCreate n e = do
-  -- Create GPG id
-  l <- gpgContext
-  let params = (def :: G.GenKeyParams)
-        { G.keyType = Just Dsa
-        , G.nameReal = C.pack n
-        , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
-        }
-  createLocalDirectory
-  ret <- withCtx l "C" OpenPGP $ \ctx -> do
-    eitherFpr <- G.genKey ctx params
-    either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
-      (\fpr -> do
-          s <- storeUserKey $ Fingerprint $ C.unpack fpr
-          return $ show s)
-      eitherFpr
-  return $ show ret
+processIdCreate _ _ = undefined
 
 -- | List the existing user IDs
 processIdList :: IO String
-processIdList = do
-  l <- gpgContext
-  res <- withCtx l "C" OpenPGP $ \ctx ->
-    listKeys ctx WithSecret
-  ids <- mapM (\k -> do
-              i <- keyUserIds' k
-              s <- keySubKeys' k
-              return (i,s)
-            ) res
-  return $ PP.render (draw $ map (\i -> (fst i, snd i)) ids)
-  where
-    draw :: [([KeyUserId], [SubKey])] -> PP.Doc
-    draw xs =
-      row "NAME" "EMAIL" "FINGERPRINT" PP.$+$ PP.vcat (map dataRow xs)
-    row n e f =
-      let nameColWidth = 15
-          emailColWidth = 30
-       in PP.text (ellipsis nameColWidth n)
-          PP.$$ PP.nest nameColWidth (PP.text (ellipsis emailColWidth e))
-          PP.$$ PP.nest (nameColWidth+emailColWidth) (PP.text f)
-    ellipsis n s
-      | ((length s) > (n-4)) = (take (n-4) s) ++ "..."
-      | otherwise            = s
-    dataRow :: ([KeyUserId], [SubKey]) -> PP.Doc
-    dataRow (names, subkeys) =
-      row (cc (userName . keyuserId) names)
-        (cc (userEmail . keyuserId) names)
-        (cc (C.unpack . subkeyFpr) subkeys)
-      where
-        cc f l = unwords (foldr (\n a -> (f n):a) [] l)
+processIdList = undefined
+  --l <- gpgContext
+  --res <- withCtx l "C" OpenPGP $ \ctx -> listKeys ctx WithSecret
+  --ids <- mapM (\k -> do
+  --            i <- keyUserIds' k
+  --            s <- keySubKeys' k
+  --            return (i,s)
+  --          ) res
+  --return $ PP.render (draw $ map (\i -> (fst i, snd i)) ids)
+  --where
+    --draw :: [([KeyUserId], [SubKey])] -> PP.Doc
+    --draw xs = undefined
+    --  row "NAME" "EMAIL" "FINGERPRINT" PP.$+$ PP.vcat (map dataRow xs)
+    --row n e f =
+    --  let nameColWidth = 15
+    --      emailColWidth = 30
+    --   in PP.text (ellipsis nameColWidth n)
+    --      PP.$$ PP.nest nameColWidth (PP.text (ellipsis emailColWidth e))
+    --      PP.$$ PP.nest (nameColWidth+emailColWidth) (PP.text f)
+    --ellipsis n s
+    --  | ((length s) > (n-4)) = (take (n-4) s) ++ "..."
+    --  | otherwise            = s
+    --dataRow :: ([KeyUserId], [SubKey]) -> PP.Doc
+    --dataRow (names, subkeys) =
+    --  row (cc (userName . keyuserId) names)
+    --    (cc (userEmail . keyuserId) names)
+    --    (cc (C.unpack . subkeyFpr) subkeys)
+    --  where
+    --    cc f l = unwords (foldr (\n a -> (f n):a) [] l)
 
 processIdRemove :: String    -- ^ Fingerprint
                 -> IO (Maybe String)
-processIdRemove fpr = do
+processIdRemove _ = undefined --do
   -- Remove from Storage
-  removeUserKey (Fingerprint fpr)
+  --removeUserKey (Fingerprint fpr)
 
-  l <- gpgContext
-  ret <- withCtx l "C" OpenPGP $ \ctx -> do
-    key <- getKey ctx (C.pack fpr) WithSecret
+  --l <- gpgContext
+  --ret <- withCtx l "C" OpenPGP $ \ctx -> do
+  --  key <- getKey ctx (C.pack fpr) WithSecret
 
-    -- Remove from GPG context
-    removeKey ctx (fromJust key) WithSecret
-  case ret of
-    Nothing  -> return $ Nothing
-    (Just e) -> return $ Just $ show e
+  --  -- Remove from GPG context
+  --  removeKey ctx (fromJust key) WithSecret
+  --case ret of
+  --  Nothing  -> return $ Nothing
+  --  (Just e) -> return $ Just $ show e
 
 processCheckInCreate :: String -- ^ Fingerprint
                      -> IO ()
-processCheckInCreate fpr = do
-  l <- gpgContext
-  eitherCT <- withCtx l "C" OpenPGP $ \ctx -> do
-    maybeKey <- getKey ctx (C.pack fpr) WithSecret
-    let key = maybe (error ("Invalid key id " ++ fpr)) id maybeKey
-    sign ctx [key] Clear (C.pack "Logged in at this date 2016-12-07")
-  let ct = either (\e -> error $ show e) id eitherCT
-  _ <- storeCheckIn (Fingerprint fpr) (CheckInProof $ C.unpack ct)
-  return ()
+processCheckInCreate _ = undefined --do
+  --l <- gpgContext
+  --eitherCT <- withCtx l "C" OpenPGP $ \ctx -> do
+  --  maybeKey <- getKey ctx (C.pack fpr) WithSecret
+  --  let key = maybe (error ("Invalid key id " ++ fpr)) id maybeKey
+  --  sign ctx [key] Clear (C.pack "Logged in at this date 2016-12-07")
+  --let ct = either (\e -> error $ show e) id eitherCT
+  --_ <- storeCheckIn (Fingerprint fpr) (CheckInProof $ C.unpack ct)
+  --return ()
