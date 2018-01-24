@@ -1,7 +1,18 @@
 flags: {}
 extra-package-dbs: []
+
 packages:
-- '.'
+  - .
+  - location:
+      git: https://github.com/eth-r/lithium.git
+      commit: master
+    extra-dep: true
+  - location:
+      git: https://github.com/eth-r/sized-memory.git
+      commit: 420e858f971974d65f26794dc0ac93315f494f71
+    extra-dep: true
+
+
 extra-deps:
-- daemons-0.2.1
+  - daemons-0.2.1
 resolver: lts-10.3

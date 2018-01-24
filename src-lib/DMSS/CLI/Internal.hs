@@ -25,12 +25,26 @@ module DMSS.CLI.Internal where
 --import Data.Default (def)
 --import qualified Data.ByteString.Char8   as C
 --import qualified  Text.PrettyPrint       as PP
+import Data.String (fromString)
+import Crypto.Lithium.Password (derive, newSalt, moderatePolicy)
+import Crypto.Lithium.Aead (Key)
+
+import Crypto.Lithium.Util.Secret
+import Crypto.Lithium.Box
 
 -- | Create a user ID
 processIdCreate :: String         -- ^ Name
                 -> Maybe String   -- ^ Email
                 -> IO String      -- ^ CLI output
-processIdCreate _ _ = undefined
+processIdCreate _ _ = do
+  -- Test gen keypair
+
+  -- Generate Id
+  s <- newSalt
+  let mk = derive (fromString "password") s moderatePolicy
+  return $ show (mk :: Crypto.Lithium.Aead.Key)
+
+  -- Store Id
 
 -- | List the existing user IDs
 processIdList :: IO String

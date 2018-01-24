@@ -56,6 +56,8 @@ library
                    , monad-logger
                    , resourcet
                    , esqueleto
+                   , sized-memory
+                   , lithium
 
 executable dmss
   default-language:  Haskell2010
