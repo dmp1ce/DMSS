@@ -13,12 +13,15 @@
 module DMSS.CLI.Internal where
 
 --import DMSS.Config
---import DMSS.Storage ( storeUserKey
+import DMSS.Storage ( storeUser
+                    , Name (..)
+                    , PassHash (..)
+                    )
 --                    , removeUserKey
 --                    , storeCheckIn
 --                    , Fingerprint (..)
 --                    , CheckInProof (..)
---                    )
+--                   )
 
 --import Data.Maybe (fromJust)
 --import Text.Email.Validate
@@ -26,25 +29,55 @@ module DMSS.CLI.Internal where
 --import qualified Data.ByteString.Char8   as C
 --import qualified  Text.PrettyPrint       as PP
 import Data.String (fromString)
-import Crypto.Lithium.Password (derive, newSalt, moderatePolicy)
-import Crypto.Lithium.Aead (Key)
+import Crypto.Lithium.Password  ( storePassword
+                                , sensitivePolicy
+                                , newSalt
+                                , derive
+                                )
+import Crypto.Lithium.SecretBox (Key)
 
-import Crypto.Lithium.Util.Secret
-import Crypto.Lithium.Box
+--import Crypto.Lithium.Password
+--import Crypto.Lithium.Box
 
 -- | Create a user ID
 processIdCreate :: String         -- ^ Name
-                -> Maybe String   -- ^ Email
+                -> String         -- ^ Password
                 -> IO String      -- ^ CLI output
-processIdCreate _ _ = do
-  -- Test gen keypair
+processIdCreate n password = do
+  -- Create hash so that I know if the password is correct
+  passStore <- storePassword sensitivePolicy (fromString password)
 
-  -- Generate Id
-  s <- newSalt
-  let mk = derive (fromString "password") s moderatePolicy
-  return $ show (mk :: Crypto.Lithium.Aead.Key)
+  -- Derive symmetric key with password.
+  salt <- newSalt
+  let symmetricKey = (derive (fromString password) salt sensitivePolicy :: Key)
+
+  -- Create keypair seed and encrypt it for later use
+  print symmetricKey
+
+  print passStore
 
   -- Store Id
+  _ <- storeUser (Name n) (PassHash (show passStore))
+
+  return "nothing"
+
+--processIdCreate n e = do
+--  -- Create GPG id
+--  l <- gpgContext
+--  let params = (def :: G.GenKeyParams)
+--        { G.keyType = Just Dsa
+--        , G.nameReal = C.pack n
+--        , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
+--        }
+--  createLocalDirectory
+--  ret <- withCtx l "C" OpenPGP $ \ctx -> do
+--    eitherFpr <- G.genKey ctx params
+--    either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
+--      (\fpr -> do
+--          s <- storeUserKey $ Fingerprint $ C.unpack fpr
+--          return $ show s)
+--      eitherFpr
+--  return $ show ret
 
 -- | List the existing user IDs
 processIdList :: IO String

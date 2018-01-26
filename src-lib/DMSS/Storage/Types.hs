@@ -8,32 +8,15 @@
 --
 -- Dead Man Switch System storage types
 --
-{-# LANGUAGE EmptyDataDecls             #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE QuasiQuotes                #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeFamilies               #-}
 
 module DMSS.Storage.Types where
 
-import           Database.Persist.TH
+import           Database.Persist.Class
+import           Database.Persist.Sql
 
-share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
-UserKey
-  fingerprint String -- ^ Fingerprint of GPG key
-  UniqueFingerprint fingerprint
-  created Int -- ^ POSIX time
-CheckIn
-  userId UserKeyId
-  raw_data String
-  created Int -- ^ POSIX time
-  deriving Show
-|]
-
-newtype Fingerprint  = Fingerprint  { unFingerprint :: String }
+newtype Name = Name { unName :: String } deriving (PersistField, PersistFieldSql)
+newtype PassHash = PassHash { unPassHash :: String } deriving (PersistField, PersistFieldSql)
+newtype KeypairStore = KeypairStore { unKeypairStore :: String } deriving (PersistField, PersistFieldSql)
 newtype CheckInProof = CheckInProof { unCheckInProof :: String }
 newtype Silent = Silent { unSilent :: Bool }

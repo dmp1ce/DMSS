@@ -10,13 +10,14 @@
 --
 module DMSS.Storage ( storeCheckIn
                     , listCheckIns
-                    , storeUserKey
-                    , getUserKeyKey
-                    , removeUserKey
+                    , storeUser
+                    , getUserKey
+                    , removeUser
                     , CheckInId
-                    , UserKeyId
-                    , Fingerprint (..)
+                    , UserId
                     , CheckInProof (..)
+                    , Name (..)
+                    , PassHash (..)
                     , dbConnectionString
                     )
   where
@@ -24,6 +25,7 @@ module DMSS.Storage ( storeCheckIn
 import           DMSS.Config ( localDirectory )
 import           DMSS.Common ( getCurrentTimeInSeconds )
 import           DMSS.Storage.Types
+import           DMSS.Storage.TH
 
 import qualified Database.Persist.Sqlite as P
 import           Database.Esqueleto
@@ -40,61 +42,62 @@ import           Control.Monad.Trans.Resource ( ResourceT )
 dbConnectionString :: IO String
 dbConnectionString = localDirectory >>= \ld -> pure $ ld ++ "/dmss.sqlite"
 
--- | Store UserKey information
-storeUserKey :: Fingerprint -- ^ UserKey Fingerprint
-             -> IO (Key UserKey)
-storeUserKey (Fingerprint s) = do
+-- | Store User information
+storeUser :: Name     -- ^ Username
+          -> PassHash -- ^ Password Hash
+          -> IO (Key User)
+storeUser n h = do
   t <- getCurrentTimeInSeconds
-  runStorage $ insert $ UserKey s t
+  runStorage $ insert $ User n h (KeypairStore "None, yet!") t
 
-removeUserKey :: Fingerprint -- ^ UserKey Fingerprint
-              -> IO ()
-removeUserKey (Fingerprint fpr) = do
-  runStorage $ do
-    -- Delete all checkins associated with UserKey
-    mUserKey <- getBy $ UniqueFingerprint fpr
-    case mUserKey of
-      Nothing  -> error "Couldn't find UserKey"
-      (Just uk) -> P.deleteWhere [ UserKeyId P.==. (entityKey uk) ]
-    -- Then delete UserKey
-    deleteBy $ UniqueFingerprint fpr
+removeUser :: Name  -- ^ User to delete by name
+           -> IO ()
+removeUser _ = undefined --do
+  --runStorage $ do
+  --  -- Delete all checkins associated with UserKey
+  --  mUserKey <- getBy $ UniqueFingerprint fpr
+  --  case mUserKey of
+  --    Nothing  -> error "Couldn't find UserKey"
+  --    (Just uk) -> P.deleteWhere [ UserKeyId P.==. (entityKey uk) ]
+  --  -- Then delete UserKey
+  --  deleteBy $ UniqueFingerprint fpr
 
 -- | Get UserKey ID
-getUserKeyKey :: Silent      -- ^ is silent and no pool?
-              -> Fingerprint -- ^ UserKey Fingerprint
-              -> IO (Maybe (Key UserKey))
-getUserKeyKey (Silent True) fpr = runStorage $ getUserKeyKeyDBActions fpr
-getUserKeyKey (Silent False) fpr = runStoragePool $ getUserKeyKeyDBActions fpr
+getUserKey :: Silent  -- ^ is silent and no pool?
+           -> Name    -- ^ User's name
+           -> IO (Maybe (Key User))
+getUserKey (Silent True) n = runStorage $ getUserKeyDBActions n
+getUserKey (Silent False) n = runStoragePool $ getUserKeyDBActions n
 
 -- | Underlying Database actions for getting UserKey Key
-getUserKeyKeyDBActions :: Fingerprint -> SqlPersistT (NoLoggingT (ResourceT IO)) (Maybe (Key UserKey))
-getUserKeyKeyDBActions (Fingerprint fpr) = do
-  maybeUserKey <- getBy $ UniqueFingerprint fpr
+getUserKeyDBActions :: Name -> SqlPersistT (NoLoggingT (ResourceT IO)) (Maybe (Key User))
+getUserKeyDBActions n = do
+  maybeUser <- getBy $ UniqueName n
   maybe
     (pure Nothing)
-    (\(Entity userKeyId _) -> pure $ Just userKeyId)
-    maybeUserKey
+    (\(Entity userId _) -> pure $ Just userId)
+    maybeUser
 
 -- | Store a CheckIn
-storeCheckIn :: Fingerprint   -- ^ Fingerprint of users key
+storeCheckIn :: Name          -- ^ Name of users
              -> CheckInProof  -- ^ Raw checkin verification proof
              -> IO (Either String (Key CheckIn))
-storeCheckIn fpr (CheckInProof rawCheckInData) = do
+storeCheckIn n (CheckInProof rawCheckInData) = do
   t <- getCurrentTimeInSeconds
   runStorage $ do
-    m <- getUserKeyKeyDBActions fpr
+    m <- getUserKeyDBActions n
     maybe (pure $ Left "Could not find users fingerprint in DB")
       (\i -> do
         res <- insert $ CheckIn i rawCheckInData t
         pure $ Right res) m
 
 -- | List the last `Int` checkins sorted by date 
-listCheckIns :: Fingerprint -> Int -> IO [Entity CheckIn]
-listCheckIns (Fingerprint fpr) i = runStorage $ do
+listCheckIns :: Name -> Int -> IO [Entity CheckIn]
+listCheckIns n i = runStorage $ do
   s <- select $
          from $ \(u, c) -> do
-           where_ ( u ^. UserKeyFingerprint ==. val fpr
-                &&. u ^. UserKeyId ==. c ^. CheckInUserId
+           where_ ( u ^. UserName ==. val n
+                &&. u ^. UserId ==. c ^. CheckInUserId
                   )
            limit (toEnum i)
            orderBy [desc (c ^. CheckInCreated)]

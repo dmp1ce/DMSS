@@ -49,7 +49,7 @@ idParser = hsubparser
 
 checkInCommandParser :: Parser CheckInCommand
 checkInCommandParser = hsubparser
-  ( command "create" (info ( CheckInCreate <$> argument str (metavar "FINGERPRINT"))
+  ( command "create" (info ( CheckInCreate <$> argument str (metavar "NAME"))
     (progDesc "Create CheckIn proof" ))
  <> command "list" (info (pure CheckInList) (progDesc "List CheckIns" ))
   )
@@ -58,11 +58,11 @@ idCommandParser :: Parser IdCommand
 idCommandParser = hsubparser
   ( command "create" (info ( IdCreate
                            <$> nameOption
-                           <*> emailOption
+                           <*> passwordOption
                            )
     ( progDesc "Create IDs" ))
  <> command "remove" (info ( IdRemove
-                           <$> argument str (metavar "FINGERPRINT")
+                           <$> argument str (metavar "NAME")
                            )
     ( progDesc "Remove ID" ))
  <> command "list" (info (pure IdList)
@@ -73,11 +73,10 @@ idCommandParser = hsubparser
       ( long "name"
      <> short 'n'
      <> help "Name of ID" )
-    emailOption = optional $ strOption
-      ( long "email"
-     <> short 'e'
-     <> value ""
-     <> help "Email of ID" )
+    passwordOption = optional $ strOption
+      ( long "password"
+     <> short 'p'
+     <> help "Password to encrypt user secret on this device" )
 
 process :: Cli -> IO ()
 process (Cli (Just homeStr) c) = do
@@ -89,7 +88,19 @@ process (Cli Nothing (Id (IdCreate Nothing e))) = do
   putStrLn "Please enter the name for the ID:"
   n <- getLine
   process $ Cli Nothing $ Id $ IdCreate (Just n) e
-process (Cli Nothing (Id (IdCreate (Just n) e))) = processIdCreate n e >>= putStrLn
+process (Cli Nothing (Id (IdCreate n Nothing))) = do
+  putStrLn "Please enter password to encrypt keys with."
+  p <- getLine
+  putStrLn "Please ensure that you remember the password"
+  putStrLn "by entering it again. Your identity will be"
+  putStrLn "unusable if you forget your password!"
+  p' <- getLine
+  if p /= p'
+  then do putStrLn "Passwords did not match."
+          process $ Cli Nothing $ Id $ IdCreate n Nothing
+  else process $ Cli Nothing $ Id $ IdCreate n (Just p)
+
+process (Cli Nothing (Id (IdCreate (Just n) (Just p)))) = processIdCreate n p >>= putStrLn
 process (Cli Nothing (Id IdList)) = processIdList >>= putStrLn
 process (Cli Nothing (Id (IdRemove fpr))) = do
   m <- processIdRemove fpr

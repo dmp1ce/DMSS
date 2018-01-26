@@ -35,6 +35,7 @@ library
                    , DMSS.Config
                    , DMSS.Storage
                    , DMSS.Storage.Types
+                   , DMSS.Storage.TH
                    , DMSS.Common
   build-depends:     base >= 4.8 && < 5
                    , daemons
