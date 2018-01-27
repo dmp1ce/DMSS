@@ -57,7 +57,8 @@ processIdCreate n password = do
   print passStore
 
   -- Store Id
-  _ <- storeUser (Name n) (PassHash (show passStore))
+  --_ <- storeUser (Name n) (PassHash (show passStore))
+  _ <- storeUser (Name n) (PassHash passStore)
 
   return "nothing"
 

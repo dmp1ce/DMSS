@@ -51,6 +51,8 @@ library
                    , persistent
                    , persistent-sqlite
                    , persistent-template
+                   , memory
+                   , sized-memory
                    , text
                    , time
                    , transformers
