@@ -22,6 +22,7 @@ import DMSS.Storage ( storeUser
 --                    , Fingerprint (..)
 --                    , CheckInProof (..)
 --                   )
+import DMSS.Crypto
 
 --import Data.Maybe (fromJust)
 --import Text.Email.Validate
@@ -35,6 +36,10 @@ import Crypto.Lithium.Password  ( storePassword
                                 , derive
                                 )
 import Crypto.Lithium.SecretBox (Key)
+import qualified Crypto.Lithium.Box  as B
+--import qualified Crypto.Lithium.Unsafe.Box  as UB
+--import qualified Crypto.Lithium.Sign as S
+--import Data.ByteString
 
 --import Crypto.Lithium.Password
 --import Crypto.Lithium.Box
@@ -51,13 +56,23 @@ processIdCreate n password = do
   salt <- newSalt
   let symmetricKey = (derive (fromString password) salt sensitivePolicy :: Key)
 
+  -- TODO: Seed could be exported as a mnemonic so identity could be restored on another device
   -- Create keypair seed and encrypt it for later use
-  print symmetricKey
+  -- seed <- newSeed
 
+  -- Create keypair for encrypting and signing
+  kp_box  <- B.newKeypair
+  --let secretBA = B.secretKey kp_box
+  --let secretBA' = (UB.fromSecretKey secretBA) :: ByteString
+  --kp_sign <- S.newKeypair
+  --print secretBA
+  --print secretBA'
+
+  print symmetricKey
   print passStore
 
-  -- Store Id
-  _ <- storeUser (Name n) (PassHash (show passStore))
+  -- Encrypt private keys for storage and store for later
+  _ <- storeUser (Name n) (PassHash (show passStore)) (encryptBoxKeypair symmetricKey kp_box)
 
   return "nothing"
 

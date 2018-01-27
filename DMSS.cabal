@@ -37,6 +37,7 @@ library
                    , DMSS.Storage.Types
                    , DMSS.Storage.TH
                    , DMSS.Common
+                   , DMSS.Crypto
   build-depends:     base >= 4.8 && < 5
                    , daemons
                    , data-default

@@ -18,6 +18,7 @@ module DMSS.Storage ( storeCheckIn
                     , CheckInProof (..)
                     , Name (..)
                     , PassHash (..)
+                    , BoxKeypairStore (..)
                     , dbConnectionString
                     )
   where
@@ -43,12 +44,13 @@ dbConnectionString :: IO String
 dbConnectionString = localDirectory >>= \ld -> pure $ ld ++ "/dmss.sqlite"
 
 -- | Store User information
-storeUser :: Name     -- ^ Username
-          -> PassHash -- ^ Password Hash
+storeUser :: Name           -- ^ Username
+          -> PassHash       -- ^ Password Hash
+          -> BoxKeypairStore   -- ^ Box keypair encrypted
           -> IO (Key User)
-storeUser n h = do
+storeUser n h bkp = do
   t <- getCurrentTimeInSeconds
-  runStorage $ insert $ User n h (KeypairStore "None, yet!") t
+  runStorage $ insert $ User n h bkp t
 
 removeUser :: Name  -- ^ User to delete by name
            -> IO ()
