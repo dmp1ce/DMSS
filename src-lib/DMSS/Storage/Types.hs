@@ -13,32 +13,33 @@
 module DMSS.Storage.Types where
 
 import           Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
-import           Data.ByteArray ( withByteArray )
-import           Data.ByteArray.Sized
---import           Data.ByteArray.Sized ( Sized (..) )
---import           Data.ByteString
+import           Crypto.Lithium.Types ( Sized (unSized), fromPlaintext, toPlaintext )
 import qualified Data.Text as T
-import           Database.Persist.Class
-import           Database.Persist.Sql
---import           Database.Persist.Types  -- FIXME explicit imports
---import           Foreign.C.String ( newCString, peekCString )
-import           Foreign.C.String ( peekCString )
-import           System.IO.Unsafe ( unsafePerformIO )
+import qualified Data.Text.Encoding as T
+import qualified Data.Text.Encoding.Error as T
+import           Database.Persist ( PersistField, fromPersistValue, toPersistValue )
+import           Database.Persist.Sql ( PersistFieldSql, sqlType )
+import           Database.Persist.Types ( PersistValue (PersistByteString), SqlType (SqlString) )
 
 newtype Name = Name { unName :: String } deriving (PersistField, PersistFieldSql)
 
 
---newtype PassHash = PassHash { unPassHash :: String } deriving (PersistField, PersistFieldSql)
 newtype PassHash = PassHash { unPassHash :: PasswordString }
 
 instance PersistField PassHash where
-  toPersistValue = PersistText . T.pack . unsafePerformIO
-    . flip withByteArray peekCString . unSized . unPasswordString . unPassHash
+  --toPersistValue :: PassHash -> PersistValue
+  toPersistValue = PersistByteString . fromPlaintext . unSized . unPasswordString . unPassHash
 
-  fromPersistValue _ = undefined
-  --fromPersistValue (PersistText t) = newCString . T.unpack $ t
-  --fromPersistValue (PersistByteString bs) = maybe (Left "BAD") (Right . PasswordString) $ asSized bs
-  --fromPersistValue (PersistByteString bs) = Right . PassHash . PasswordString . Sized $ bs
+  --fromPersistValue :: PersistValue -> Either Text PassHash
+  fromPersistValue (PersistByteString bs) = maybe
+    (deserializePassHashErrorMsg . T.decodeUtf8With T.strictDecode $ bs)
+    (Right . PassHash . PasswordString)
+    $ toPlaintext bs
+  fromPersistValue perVal= deserializePassHashErrorMsg . T.pack . show $ perVal
+
+deserializePassHashErrorMsg :: T.Text -> Either T.Text a
+deserializePassHashErrorMsg = Left . T.append (T.pack
+  "Deserialization of password hash from database failed because we cannot parse this data: ")
 
 instance PersistFieldSql PassHash where
   sqlType _ = SqlString
