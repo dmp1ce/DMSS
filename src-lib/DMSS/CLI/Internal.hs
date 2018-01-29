@@ -14,10 +14,11 @@ module DMSS.CLI.Internal where
 
 --import DMSS.Config
 import DMSS.Storage ( storeUser
+                    , listUsers
+                    , removeUser
                     , Name (..)
                     , PassHash (..)
                     )
---                    , removeUserKey
 --                    , storeCheckIn
 --                    , Fingerprint (..)
 --                    , CheckInProof (..)
@@ -72,8 +73,8 @@ processIdCreate n password = do
   print passStore
 
   -- Encrypt private keys for storage and store for later
-  _ <- storeUser (Name n) (PassHash (show passStore)) (encryptBoxKeypair symmetricKey kp_box)
-
+  kpStore <- encryptBoxKeypair symmetricKey kp_box
+  _ <- storeUser (Name n) (PassHash (show passStore)) kpStore
   return "nothing"
 
 --processIdCreate n e = do
@@ -94,11 +95,12 @@ processIdCreate n password = do
 --      eitherFpr
 --  return $ show ret
 
--- | List the existing user IDs
+-- | List the existing users
 processIdList :: IO String
-processIdList = undefined
-  --l <- gpgContext
-  --res <- withCtx l "C" OpenPGP $ \ctx -> listKeys ctx WithSecret
+processIdList = do
+  -- TODO: Remove hardcoded max size
+  users <- listUsers 10
+  return $ show users
   --ids <- mapM (\k -> do
   --            i <- keyUserIds' k
   --            s <- keySubKeys' k
@@ -126,11 +128,12 @@ processIdList = undefined
     --  where
     --    cc f l = unwords (foldr (\n a -> (f n):a) [] l)
 
-processIdRemove :: String    -- ^ Fingerprint
+processIdRemove :: String    -- ^ Name
                 -> IO (Maybe String)
-processIdRemove _ = undefined --do
+processIdRemove n = do
   -- Remove from Storage
-  --removeUserKey (Fingerprint fpr)
+  removeUser (Name n)
+  return Nothing
 
   --l <- gpgContext
   --ret <- withCtx l "C" OpenPGP $ \ctx -> do
@@ -142,7 +145,8 @@ processIdRemove _ = undefined --do
   --  Nothing  -> return $ Nothing
   --  (Just e) -> return $ Just $ show e
 
-processCheckInCreate :: String -- ^ Fingerprint
+processCheckInCreate :: String -- ^ Name
+                     -> String -- ^ Password
                      -> IO ()
 processCheckInCreate _ = undefined --do
   --l <- gpgContext

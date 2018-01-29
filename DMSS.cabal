@@ -93,6 +93,7 @@ test-suite DMSS-test
                    , filepath
                    , persistent-sqlite
                    , DMSS
+                   , bytestring
   other-modules:     DaemonTest
                    , StorageTest
                    , CLITest
