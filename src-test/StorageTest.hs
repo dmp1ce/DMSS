@@ -1,8 +1,8 @@
 module StorageTest (tests) where
 
-import Test.Tasty
-import Test.Tasty.HUnit
---import Test.Tasty.SmallCheck
+import           Test.Tasty
+import           Test.Tasty.HUnit
+import qualified Test.Tasty.QuickCheck   as QC
 
 import DMSS.Storage.Types
 import DMSS.Storage.TH
@@ -13,18 +13,19 @@ import DMSS.Storage ( storeCheckIn
                     , listCheckIns
                     )
 
+import           Common
 
-import Common
 import qualified Data.ByteString.Char8 as BS (pack)
+import           Data.List
 
 import qualified Database.Persist.Sqlite as P
-import Data.List
 
 tests :: [TestTree]
 tests =
   [ testCase "store_user_key_test" storeUserTest
   , testCase "store_check_in_test" storeCheckInTest
   , testCase "remove_user_key_test" removeUserKeyTest
+  , QC.testProperty "prop_userStorage" prop_userStorage
   ]
 
 tempDir :: FilePath
@@ -89,3 +90,8 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
       then return ()
       else assertFailure "CheckIns were not in decending order"
   )
+
+-- Ensure data that goes into Persistence comes out the same
+prop_userStorage :: BoxKeypairStore -> Bool
+prop_userStorage bkp =
+  (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp
