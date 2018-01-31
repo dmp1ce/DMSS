@@ -36,8 +36,7 @@ tempDir = "storageTest"
 
 
 dummyPassHash :: PassHash
---dummyPassHash = PassHash "Password"
-dummyPassHash = fromJust $ PassHash . PasswordString <$> (toPlaintext . pack $ "Password")
+dummyPassHash = fromJust $ PassHash . PasswordString <$> (toPlaintext . pack $ "$argon2id$v=19$m=1048576,t=4,p=1$p4S9shWCYwIX1zTKxWrblQ$nJx1a6Yg3jJwvP+d8nBU+dkFYqM3LlnfhMh01OMbD4Q\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL")
 
 
 dummyBoxKeypairStore :: BoxKeypairStore
