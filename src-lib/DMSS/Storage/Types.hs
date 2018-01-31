@@ -59,6 +59,7 @@ instance PersistFieldSql PassHash where
 
 newtype Password = Password String deriving Show
 
+
 data BoxKeypairStore = BoxKeypairStore { boxSecretKeyStore :: ByteString
                                        , boxPublicKeyStore :: ByteString
                                        } deriving (Show, Eq)
@@ -74,6 +75,7 @@ instance PersistField BoxKeypairStore where
                              ++ show r
 instance PersistFieldSql BoxKeypairStore where
   sqlType _ = SqlString
+
 
 data SignKeypairStore = SignKeypairStore { signSecretKeyStore :: ByteString
                                        , signPublicKeyStore :: ByteString
