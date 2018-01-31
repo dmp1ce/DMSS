@@ -25,7 +25,10 @@ tests =
   [ testCase "store_user_key_test" storeUserTest
   , testCase "store_check_in_test" storeCheckInTest
   , testCase "remove_user_key_test" removeUserKeyTest
-  , QC.testProperty "prop_userStorage" prop_userStorage
+  , QC.testProperty "prop_userStorage_BoxKeypairStore"
+      prop_userStorage_BoxKeypairStore
+  , QC.testProperty "prop_userStorage_SignKeypairStore"
+      prop_userStorage_SignKeypairStore
   ]
 
 tempDir :: FilePath
@@ -34,13 +37,15 @@ tempDir = "storageTest"
 dummyPassHash :: PassHash
 dummyPassHash = PassHash "Password"
 dummyBoxKeypairStore :: BoxKeypairStore
-dummyBoxKeypairStore = BoxKeypairStore (BS.pack "encryptedPrivateKeyCiphertext") (BS.pack "publicKeyText")
+dummyBoxKeypairStore = BoxKeypairStore (BS.pack "Box encryptedPrivateKeyCiphertext") (BS.pack "Box publicKeyText")
+dummySignKeypairStore :: SignKeypairStore
+dummySignKeypairStore = SignKeypairStore (BS.pack "Sign encryptedPrivateKeyCiphertext") (BS.pack "Sign publicKeyText")
 
 storeUserTest :: Assertion
 storeUserTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Store fake user key
     let n = Name "joe"
-    _ <- storeUser n dummyPassHash dummyBoxKeypairStore
+    _ <- storeUser n dummyPassHash dummyBoxKeypairStore dummySignKeypairStore
 
     -- Check that the fake user key was stored
     k <- getUserKey (Silent True) n
@@ -53,7 +58,7 @@ removeUserKeyTest :: Assertion
 removeUserKeyTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Store fake user key
     let n = Name "deleteMe1234"
-    _ <- storeUser n dummyPassHash dummyBoxKeypairStore
+    _ <- storeUser n dummyPassHash dummyBoxKeypairStore dummySignKeypairStore
 
     -- Remove key
     removeUser n
@@ -69,7 +74,7 @@ storeCheckInTest :: Assertion
 storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Store a checkin
     let n = Name "joe"
-    _ <- storeUser n dummyPassHash dummyBoxKeypairStore
+    _ <- storeUser n dummyPassHash dummyBoxKeypairStore dummySignKeypairStore
     res <- storeCheckIn n (CheckInProof "MyProof")
     case res of
       (Left s) -> assertFailure s
@@ -92,6 +97,10 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
   )
 
 -- Ensure data that goes into Persistence comes out the same
-prop_userStorage :: BoxKeypairStore -> Bool
-prop_userStorage bkp =
+prop_userStorage_BoxKeypairStore :: BoxKeypairStore -> Bool
+prop_userStorage_BoxKeypairStore bkp =
+  (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp
+
+prop_userStorage_SignKeypairStore :: SignKeypairStore -> Bool
+prop_userStorage_SignKeypairStore bkp =
   (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp

@@ -28,6 +28,7 @@ User
   name Name                   -- ^ User's name
   passwordStore PassHash      -- ^ Password storage hash
   boxKeypairStore  BoxKeypairStore  -- ^ Keypair stored as seed
+  signKeypairStore  SignKeypairStore  -- ^ Keypair stored as seed
   UniqueName name
   created Int                 -- ^ POSIX time
   deriving Show

@@ -10,11 +10,14 @@
 --
 module DMSS.Crypto where
 
-import DMSS.Storage ( BoxKeypairStore (..))
+import DMSS.Storage ( BoxKeypairStore (..)
+                    , SignKeypairStore (..)
+                    )
 
 
 import           Crypto.Lithium.SecretBox (Key, secretBox, getCiphertext)
 import qualified Crypto.Lithium.Box as B
+import qualified Crypto.Lithium.Sign as S
 import           Crypto.Lithium.Unsafe.Types (Plaintext (..), Secret (..))
 import           Data.ByteArray.Sized
 --import qualified Crypto.Lithium.Sign  as B
@@ -24,3 +27,9 @@ encryptBoxKeypair symKey (B.Keypair sk pk) = do
     skText <- getCiphertext <$> ((secretBox symKey) . unSized . reveal . B.unSecretKey) sk
     let pkText = (fromPlaintext . unSized . B.unPublicKey) pk
     return $ BoxKeypairStore skText pkText
+
+encryptSignKeypair :: Key -> S.Keypair -> IO SignKeypairStore
+encryptSignKeypair symKey (S.Keypair sk pk) = do
+    skText <- getCiphertext <$> ((secretBox symKey) . unSized . reveal . S.unSecretKey) sk
+    let pkText = (fromPlaintext . unSized . S.unPublicKey) pk
+    return $ SignKeypairStore skText pkText
