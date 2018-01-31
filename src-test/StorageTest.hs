@@ -1,27 +1,33 @@
 module StorageTest (tests) where
 
-import           Test.Tasty
-import           Test.Tasty.HUnit
-import qualified Test.Tasty.QuickCheck   as QC
-
-import DMSS.Storage.Types
-import DMSS.Storage.TH
-import DMSS.Storage ( storeCheckIn
-                    , storeUser
-                    , getUserKey
-                    , removeUser
-                    , listCheckIns
-                    )
-
-import           Common
-
-import Data.ByteString.Char8 (pack)
-import           Data.List
-
 import Crypto.Lithium.Types ( toPlaintext )
 import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
-import qualified Database.Persist.Sqlite as P
+import Data.ByteString.Char8 (pack)
+import Data.List ( sort )
 import Data.Maybe ( fromJust )
+import qualified Database.Persist.Sqlite as P
+import DMSS.Storage
+  ( storeCheckIn
+  , storeUser
+  , getUserKey
+  , removeUser
+  , listCheckIns
+  )
+import DMSS.Storage.TH
+import DMSS.Storage.Types
+  ( BoxKeypairStore (..)
+  , CheckInProof (..)
+  , Name (..)
+  , PassHash (..)
+  , Silent (..)
+  , SignKeypairStore (..)
+  )
+import Test.Tasty ( TestTree )
+import Test.Tasty.HUnit ( Assertion, assertFailure, testCase )
+import qualified Test.Tasty.QuickCheck as QC
+
+import Common ( withTemporaryTestDirectory )
+
 
 tests :: [TestTree]
 tests =

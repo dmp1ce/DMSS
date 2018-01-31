@@ -21,16 +21,20 @@ import Data.String.Conv ( toS )
 import Data.Text ( Text, append )
 import Database.Persist ( PersistField, fromPersistValue, toPersistValue )
 import Database.Persist.Sql ( PersistFieldSql, sqlType )
-import Database.Persist.Types ( PersistValue (PersistList, PersistByteString), SqlType (SqlString) )
+import Database.Persist.Types
+   ( PersistValue (PersistList, PersistByteString)
+   , SqlType (SqlString)
+   )
 import qualified Data.ByteString.Base64 as B64
 
 -- For testing
-import           Test.QuickCheck  ( Arbitrary (..)
-                                  , arbitrary
---                                  , Gen
---                                  , listOf
---                                  , elements
-                                  )
+import Test.QuickCheck
+   ( Arbitrary (..)
+   , arbitrary
+--   , Gen
+--   , listOf
+--   , elements
+   )
 
 
 newtype Name = Name { unName :: String } deriving (Show, PersistField, PersistFieldSql)
