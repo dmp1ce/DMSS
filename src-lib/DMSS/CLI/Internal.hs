@@ -13,6 +13,7 @@
 module DMSS.CLI.Internal where
 
 --import DMSS.Config
+import DMSS.Storage.TH (userName)
 import DMSS.Storage ( storeUser
                     , listUsers
                     , removeUser
@@ -23,7 +24,6 @@ import DMSS.Storage ( storeUser
 --                    , Fingerprint (..)
 --                    , CheckInProof (..)
 --                   )
-import DMSS.Storage.TH ( User (userName) )
 import DMSS.Crypto
 
 --import Data.Maybe (fromJust)
@@ -37,8 +37,9 @@ import Crypto.Lithium.Password  ( storePassword
                                 , newSalt
                                 , derive
                                 )
-import Crypto.Lithium.SecretBox (Key)
-import qualified Crypto.Lithium.Box  as B
+import qualified Crypto.Lithium.SecretBox as SB
+import qualified Crypto.Lithium.Box       as B
+import qualified Crypto.Lithium.Sign      as S
 --import qualified Crypto.Lithium.Unsafe.Box  as UB
 --import qualified Crypto.Lithium.Sign as S
 --import Data.ByteString
@@ -52,14 +53,14 @@ import Database.Persist.Types ( Entity (..) )
 -- | Create a user ID
 processIdCreate :: String         -- ^ Name
                 -> String         -- ^ Password
-                -> IO String      -- ^ CLI output
+                -> IO String
 processIdCreate n password = do
   -- Create hash so that I know if the password is correct
   passStore <- storePassword sensitivePolicy (fromString password)
 
   -- Derive symmetric key with password.
   salt <- newSalt
-  let symmetricKey = (derive (fromString password) salt sensitivePolicy :: Key)
+  let symmetricKey = (derive (fromString password) salt sensitivePolicy :: SB.Key)
 
   -- TODO: Seed could be exported as a mnemonic so identity could be restored on another device
   -- Create keypair seed and encrypt it for later use
@@ -67,19 +68,21 @@ processIdCreate n password = do
 
   -- Create keypair for encrypting and signing
   kp_box  <- B.newKeypair
+  kp_sign <- S.newKeypair
   --let secretBA = B.secretKey kp_box
   --let secretBA' = (UB.fromSecretKey secretBA) :: ByteString
   --kp_sign <- S.newKeypair
   --print secretBA
   --print secretBA'
 
-  print symmetricKey
-  print passStore
+  --print symmetricKey
+  --print passStore
 
   -- Encrypt private keys for storage and store for later
-  kpStore <- encryptBoxKeypair symmetricKey kp_box
-  _ <- storeUser (Name n) (PassHash passStore) kpStore
-  return "nothing"
+  kpbStore <- encryptBoxKeypair symmetricKey kp_box
+  kpsStore <- encryptSignKeypair symmetricKey kp_sign
+  r <- storeUser (Name n) (PassHash passStore) kpbStore kpsStore
+  return (show r)
 
 --processIdCreate n e = do
 --  -- Create GPG id

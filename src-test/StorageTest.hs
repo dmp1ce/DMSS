@@ -1,8 +1,8 @@
 module StorageTest (tests) where
 
-import Test.Tasty
-import Test.Tasty.HUnit
---import Test.Tasty.SmallCheck
+import           Test.Tasty
+import           Test.Tasty.HUnit
+import qualified Test.Tasty.QuickCheck   as QC
 
 import DMSS.Storage.Types
 import DMSS.Storage.TH
@@ -13,22 +13,25 @@ import DMSS.Storage ( storeCheckIn
                     , listCheckIns
                     )
 
+import           Common
 
-import Common
-import Data.ByteString.Char8 ( pack )
+import Data.ByteString.Char8 (pack)
+import           Data.List
 
 import Crypto.Lithium.Types ( toPlaintext )
 import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
 import qualified Database.Persist.Sqlite as P
-import Data.List
 import Data.Maybe ( fromJust )
-
 
 tests :: [TestTree]
 tests =
   [ testCase "store_user_key_test" storeUserTest
   , testCase "store_check_in_test" storeCheckInTest
   , testCase "remove_user_key_test" removeUserKeyTest
+  , QC.testProperty "prop_userStorage_BoxKeypairStore"
+      prop_userStorage_BoxKeypairStore
+  , QC.testProperty "prop_userStorage_SignKeypairStore"
+      prop_userStorage_SignKeypairStore
   ]
 
 tempDir :: FilePath
@@ -40,13 +43,15 @@ dummyPassHash = fromJust $ PassHash . PasswordString <$> (toPlaintext . pack $ "
 
 
 dummyBoxKeypairStore :: BoxKeypairStore
-dummyBoxKeypairStore = BoxKeypairStore (pack "encryptedPrivateKeyCiphertext") (pack "publicKeyText")
+dummyBoxKeypairStore = BoxKeypairStore (pack "Box encryptedPrivateKeyCiphertext") (pack "Box publicKeyText")
+dummySignKeypairStore :: SignKeypairStore
+dummySignKeypairStore = SignKeypairStore (pack "Sign encryptedPrivateKeyCiphertext") (pack "Sign publicKeyText")
 
 storeUserTest :: Assertion
 storeUserTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Store fake user key
     let n = Name "joe"
-    _ <- storeUser n dummyPassHash dummyBoxKeypairStore
+    _ <- storeUser n dummyPassHash dummyBoxKeypairStore dummySignKeypairStore
 
     -- Check that the fake user key was stored
     k <- getUserKey (Silent True) n
@@ -59,7 +64,7 @@ removeUserKeyTest :: Assertion
 removeUserKeyTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Store fake user key
     let n = Name "deleteMe1234"
-    _ <- storeUser n dummyPassHash dummyBoxKeypairStore
+    _ <- storeUser n dummyPassHash dummyBoxKeypairStore dummySignKeypairStore
 
     -- Remove key
     removeUser n
@@ -75,7 +80,7 @@ storeCheckInTest :: Assertion
 storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Store a checkin
     let n = Name "joe"
-    _ <- storeUser n dummyPassHash dummyBoxKeypairStore
+    _ <- storeUser n dummyPassHash dummyBoxKeypairStore dummySignKeypairStore
     res <- storeCheckIn n (CheckInProof "MyProof")
     case res of
       (Left s) -> assertFailure s
@@ -96,3 +101,12 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
       then return ()
       else assertFailure "CheckIns were not in decending order"
   )
+
+-- Ensure data that goes into Persistence comes out the same
+prop_userStorage_BoxKeypairStore :: BoxKeypairStore -> Bool
+prop_userStorage_BoxKeypairStore bkp =
+  (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp
+
+prop_userStorage_SignKeypairStore :: SignKeypairStore -> Bool
+prop_userStorage_SignKeypairStore bkp =
+  (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp

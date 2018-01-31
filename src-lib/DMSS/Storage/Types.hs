@@ -17,12 +17,19 @@ module DMSS.Storage.Types where
 import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
 import Crypto.Lithium.Types ( Sized (unSized), fromPlaintext, toPlaintext )
 import Data.ByteString ( ByteString )
-import Data.Either ( fromRight )
 import Data.String.Conv ( toS )
 import Data.Text ( Text, append )
 import Database.Persist ( PersistField, fromPersistValue, toPersistValue )
 import Database.Persist.Sql ( PersistFieldSql, sqlType )
 import Database.Persist.Types ( PersistValue (PersistList, PersistByteString), SqlType (SqlString) )
+
+-- For testing
+import           Test.QuickCheck  ( Arbitrary (..)
+                                  , arbitrary
+                                  , Gen
+                                  , listOf
+                                  , elements
+                                  )
 
 
 newtype Name = Name { unName :: String } deriving (Show, PersistField, PersistFieldSql)
@@ -51,23 +58,64 @@ instance PersistFieldSql PassHash where
 
 newtype Password = Password String deriving Show
 
-
 data BoxKeypairStore = BoxKeypairStore { boxSecretKeyStore :: ByteString
                                        , boxPublicKeyStore :: ByteString
-                                       } deriving (Show)
+                                       } deriving (Show, Eq)
 
 instance PersistField BoxKeypairStore where
-  toPersistValue (BoxKeypairStore sk _) = PersistList [toPersistValue sk, toPersistValue sk]
-
+  toPersistValue (BoxKeypairStore sk pk) =
+    PersistList [toPersistValue sk, toPersistValue pk]
   fromPersistValue v = case fromPersistValue v of
-    Right (sk:pk:[]) -> Right $ BoxKeypairStore (toS . fromRight "" . fromPersistValue $ sk) (toS . fromRight "" . fromPersistValue $ pk)
-    Left t -> Left . toS $ "Busted: " ++ show t
-    _      -> Left . toS $ "Busted!"
-
+    Right (sk:pk:[]) -> BoxKeypairStore <$> fromPersistValue sk
+                                        <*> fromPersistValue pk
+    Left t  -> Left . toS $ show t
+    Right r -> Left . toS $ "Did not recieve the expected two values."
+                             ++ show r
 instance PersistFieldSql BoxKeypairStore where
+  sqlType _ = SqlString
+
+data SignKeypairStore = SignKeypairStore { signSecretKeyStore :: ByteString
+                                       , signPublicKeyStore :: ByteString
+                                       } deriving (Show, Eq)
+
+instance PersistField SignKeypairStore where
+  toPersistValue (SignKeypairStore sk pk) =
+    PersistList [toPersistValue sk, toPersistValue pk]
+  fromPersistValue v = case fromPersistValue v of
+    Right (sk:pk:[]) -> SignKeypairStore <$> fromPersistValue sk
+                                         <*> fromPersistValue pk
+    Left t  -> Left . toS $ show t
+    Right r -> Left . toS $ "Did not recieve the expected two values."
+                             ++ show r
+instance PersistFieldSql SignKeypairStore where
   sqlType _ = SqlString
 
 
 newtype CheckInProof = CheckInProof { unCheckInProof :: String }
 
+
 newtype Silent = Silent { unSilent :: Bool }
+
+
+-- For testing
+
+-- Generate some 'safe' strings
+-- https://stackoverflow.com/a/20936497/350221
+genSafeChar :: Gen Char
+genSafeChar = elements (['a'..'z'] ++ ['0'..'9'] ++
+  ['$','\\','#','/','%','@','!'])
+genSafeString :: Gen String
+genSafeString = listOf genSafeChar
+
+-- KeypairStores should never be a non visible characters
+instance Arbitrary BoxKeypairStore where
+  arbitrary = do
+    s <- genSafeString
+    p <- genSafeString
+    return $ BoxKeypairStore (toS s) (toS p)
+
+instance Arbitrary SignKeypairStore where
+  arbitrary = do
+    s <- genSafeString
+    p <- genSafeString
+    return $ SignKeypairStore (toS s) (toS p)
