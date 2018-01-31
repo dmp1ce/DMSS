@@ -15,14 +15,15 @@ module DMSS.Storage.Types where
 import           Database.Persist.Class
 import           Database.Persist.Sql
 import qualified Data.ByteString.Char8  as BS8
+import qualified Data.ByteString.Base64 as B64
 import qualified Data.Text              as T
 
 -- For testing
 import           Test.QuickCheck  ( Arbitrary (..)
                                   , arbitrary
-                                  , Gen
-                                  , listOf
-                                  , elements
+--                                  , Gen
+--                                  , listOf
+--                                  , elements
                                   )
 
 
@@ -65,22 +66,14 @@ newtype Silent = Silent { unSilent :: Bool }
 
 -- For testing
 
--- Generate some 'safe' strings
--- https://stackoverflow.com/a/20936497/350221
-genSafeChar :: Gen Char
-genSafeChar = elements (['a'..'z'] ++ ['0'..'9'] ++
-  ['$','\\','#','/','%','@','!'])
-genSafeString :: Gen String
-genSafeString = listOf genSafeChar
-
--- KeypairStores should never be a non visible characters
+-- KeypairStores should be base64 encoded to prevent characters with special functions
 instance Arbitrary BoxKeypairStore where
   arbitrary = do
-    s <- genSafeString
-    p <- genSafeString
-    return $ BoxKeypairStore (BS8.pack s) (BS8.pack p)
+    s <- arbitrary
+    p <- arbitrary
+    return $ BoxKeypairStore ((B64.encode . BS8.pack) s) ((B64.encode . BS8.pack) p)
 instance Arbitrary SignKeypairStore where
   arbitrary = do
-    s <- genSafeString
-    p <- genSafeString
-    return $ SignKeypairStore (BS8.pack s) (BS8.pack p)
+    s <- arbitrary
+    p <- arbitrary
+    return $ SignKeypairStore ((B64.encode . BS8.pack) s) ((B64.encode . BS8.pack) p)

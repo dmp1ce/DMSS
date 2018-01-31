@@ -13,12 +13,14 @@
 module DMSS.CLI.Internal where
 
 --import DMSS.Config
-import DMSS.Storage.TH (userName)
 import DMSS.Storage ( storeUser
                     , listUsers
                     , removeUser
                     , Name (..)
                     , PassHash (..)
+                    , User (..)
+                    , BoxKeypairStore (..)
+                    , SignKeypairStore (..)
                     )
 --                    , storeCheckIn
 --                    , Fingerprint (..)
@@ -29,8 +31,8 @@ import DMSS.Crypto
 --import Data.Maybe (fromJust)
 --import Text.Email.Validate
 --import Data.Default (def)
---import qualified Data.ByteString.Char8   as C
---import qualified  Text.PrettyPrint       as PP
+import qualified Data.ByteString.Char8  as BS8
+import qualified Text.PrettyPrint       as PP
 import Data.String (fromString)
 import Crypto.Lithium.Password  ( storePassword
                                 , sensitivePolicy
@@ -46,8 +48,6 @@ import qualified Crypto.Lithium.Sign      as S
 
 --import Crypto.Lithium.Password
 --import Crypto.Lithium.Box
-
-import Database.Persist.Types (Entity (..))
 
 -- | Create a user ID
 processIdCreate :: String         -- ^ Name
@@ -105,35 +105,26 @@ processIdCreate n password = do
 processIdList :: IO String
 processIdList = do
   -- TODO: Remove hardcoded max size
-  users <- listUsers 10
-  return $ show ((userName . entityVal) <$> users)
-  --return $ show users
-  --ids <- mapM (\k -> do
-  --            i <- keyUserIds' k
-  --            s <- keySubKeys' k
-  --            return (i,s)
-  --          ) res
-  --return $ PP.render (draw $ map (\i -> (fst i, snd i)) ids)
-  --where
-    --draw :: [([KeyUserId], [SubKey])] -> PP.Doc
-    --draw xs = undefined
-    --  row "NAME" "EMAIL" "FINGERPRINT" PP.$+$ PP.vcat (map dataRow xs)
-    --row n e f =
-    --  let nameColWidth = 15
-    --      emailColWidth = 30
-    --   in PP.text (ellipsis nameColWidth n)
-    --      PP.$$ PP.nest nameColWidth (PP.text (ellipsis emailColWidth e))
-    --      PP.$$ PP.nest (nameColWidth+emailColWidth) (PP.text f)
-    --ellipsis n s
-    --  | ((length s) > (n-4)) = (take (n-4) s) ++ "..."
-    --  | otherwise            = s
-    --dataRow :: ([KeyUserId], [SubKey]) -> PP.Doc
-    --dataRow (names, subkeys) =
-    --  row (cc (userName . keyuserId) names)
-    --    (cc (userEmail . keyuserId) names)
-    --    (cc (C.unpack . subkeyFpr) subkeys)
-    --  where
-    --    cc f l = unwords (foldr (\n a -> (f n):a) [] l)
+  users <- listUsers 30
+  return $ PP.render (draw users)
+  where
+    draw :: [User] -> PP.Doc
+    draw xs =
+      row "NAME" "ENC PUBKEY" "SIGN PUBKEY" PP.$+$ PP.vcat (map dataRow xs)
+    row n e f =
+      let nameColWidth = 10
+          emailColWidth = 48
+       in PP.text (ellipsis nameColWidth n)
+          PP.$$ PP.nest nameColWidth (PP.text (ellipsis emailColWidth e))
+          PP.$$ PP.nest (nameColWidth+emailColWidth) (PP.text f)
+    ellipsis n s
+      | ((length s) > (n-4)) = (take (n-4) s) ++ "..."
+      | otherwise            = s
+    dataRow :: User -> PP.Doc
+    dataRow u =
+      row ((unName . userName) u)
+        (BS8.unpack $ (boxPublicKeyStore . userBoxKeypairStore) u)
+        (BS8.unpack $ (signPublicKeyStore . userSignKeypairStore) u)
 
 processIdRemove :: String    -- ^ Name
                 -> IO (Maybe String)

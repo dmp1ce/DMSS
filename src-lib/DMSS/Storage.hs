@@ -22,6 +22,7 @@ module DMSS.Storage ( storeCheckIn
                     , BoxKeypairStore (..)
                     , SignKeypairStore (..)
                     , dbConnectionString
+                    , User (..)
                     )
   where
 
@@ -74,15 +75,14 @@ getUserKey (Silent True) n = runStorage $ getUserKeyDBActions n
 getUserKey (Silent False) n = runStoragePool $ getUserKeyDBActions n
 
 -- | List the last `Int` users sorted by date
-listUsers :: Int -> IO [Entity User]
+listUsers :: Int -> IO [User]
 listUsers i = runStorage $ do
   s <- select $
          from $ \c -> do
            limit (toEnum i)
            orderBy [desc (c ^. UserCreated)]
            return c
-  return (s :: [Entity User])
-
+  return (entityVal <$> s)
 
 -- | Underlying Database actions for getting UserKey Key
 getUserKeyDBActions :: Name -> SqlPersistT (NoLoggingT (ResourceT IO)) (Maybe (Key User))

@@ -61,6 +61,7 @@ library
                    , sized-memory
                    , lithium
                    , QuickCheck
+                   , base64-bytestring
 
 executable dmss
   default-language:  Haskell2010
