@@ -37,6 +37,7 @@ library
                    , DMSS.Storage.Types
                    , DMSS.Storage.TH
                    , DMSS.Common
+                   , DMSS.Crypto
   build-depends:     base >= 4.8 && < 5
                    , daemons
                    , data-default
@@ -61,6 +62,7 @@ library
                    , esqueleto
                    , sized-memory
                    , lithium
+                   , string-conv
 
 executable dmss
   default-language:  Haskell2010
@@ -92,8 +94,10 @@ test-suite DMSS-test
                    , temporary
                    , directory >= 1.2.5
                    , filepath
+                   , lithium
                    , persistent-sqlite
                    , DMSS
+                   , bytestring
   other-modules:     DaemonTest
                    , StorageTest
                    , CLITest

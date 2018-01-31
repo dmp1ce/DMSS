@@ -11,6 +11,7 @@
 module DMSS.Storage ( storeCheckIn
                     , listCheckIns
                     , storeUser
+                    , listUsers
                     , getUserKey
                     , removeUser
                     , CheckInId
@@ -18,6 +19,7 @@ module DMSS.Storage ( storeCheckIn
                     , CheckInProof (..)
                     , Name (..)
                     , PassHash (..)
+                    , BoxKeypairStore (..)
                     , dbConnectionString
                     )
   where
@@ -43,24 +45,24 @@ dbConnectionString :: IO String
 dbConnectionString = localDirectory >>= \ld -> pure $ ld ++ "/dmss.sqlite"
 
 -- | Store User information
-storeUser :: Name     -- ^ Username
-          -> PassHash -- ^ Password Hash
+storeUser :: Name           -- ^ Username
+          -> PassHash       -- ^ Password Hash
+          -> BoxKeypairStore   -- ^ Box keypair encrypted
           -> IO (Key User)
-storeUser n h = do
+storeUser n h bkp = do
   t <- getCurrentTimeInSeconds
-  runStorage $ insert $ User n h (KeypairStore "None, yet!") t
+  runStorage $ insert $ User n h bkp t
 
 removeUser :: Name  -- ^ User to delete by name
            -> IO ()
-removeUser _ = undefined --do
-  --runStorage $ do
-  --  -- Delete all checkins associated with UserKey
-  --  mUserKey <- getBy $ UniqueFingerprint fpr
-  --  case mUserKey of
-  --    Nothing  -> error "Couldn't find UserKey"
-  --    (Just uk) -> P.deleteWhere [ UserKeyId P.==. (entityKey uk) ]
-  --  -- Then delete UserKey
-  --  deleteBy $ UniqueFingerprint fpr
+removeUser n = runStorage $ do
+  -- Delete all checkins associated with UserKey
+  mUserKey <- getBy $ UniqueName n
+  case mUserKey of
+    Nothing  -> error "Couldn't find User"
+    (Just uk) -> P.deleteWhere [ UserId P.==. (entityKey uk) ]
+  -- Then delete UserKey
+  deleteBy $ UniqueName n
 
 -- | Get UserKey ID
 getUserKey :: Silent  -- ^ is silent and no pool?
@@ -68,6 +70,17 @@ getUserKey :: Silent  -- ^ is silent and no pool?
            -> IO (Maybe (Key User))
 getUserKey (Silent True) n = runStorage $ getUserKeyDBActions n
 getUserKey (Silent False) n = runStoragePool $ getUserKeyDBActions n
+
+-- | List the last `Int` users sorted by date
+listUsers :: Int -> IO [Entity User]
+listUsers i = runStorage $ do
+  s <- select $
+         from $ \c -> do
+           limit (toEnum i)
+           orderBy [desc (c ^. UserCreated)]
+           return c
+  return (s :: [Entity User])
+
 
 -- | Underlying Database actions for getting UserKey Key
 getUserKeyDBActions :: Name -> SqlPersistT (NoLoggingT (ResourceT IO)) (Maybe (Key User))

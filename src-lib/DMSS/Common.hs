@@ -14,7 +14,7 @@ module DMSS.Common ( getCurrentTimeInSeconds
                    ) where
 
 import DMSS.Storage.TH
-import Crypto.Lithium.Password
+import DMSS.Storage.Types
 --import DMSS.Config
 
 import Database.Persist.Sqlite
@@ -25,5 +25,5 @@ import Data.Time.Clock.POSIX
 getCurrentTimeInSeconds :: IO Int
 getCurrentTimeInSeconds = getCurrentTime >>= \t -> pure $ fromEnum $ utcTimeToPOSIXSeconds t
 
-verifyCheckIn :: Password -> Entity CheckIn -> IO Bool
-verifyCheckIn (Password _) _ = undefined
+verifyCheckIn :: Name -> DMSS.Storage.Types.Password -> Entity CheckIn -> IO Bool
+verifyCheckIn (Name _) (DMSS.Storage.Types.Password _) _ = undefined

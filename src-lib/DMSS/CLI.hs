@@ -108,8 +108,10 @@ process (Cli Nothing (Id (IdRemove fpr))) = do
     Nothing -> return ()
     Just s -> putStrLn s
 
-process (Cli Nothing (CheckIn (CheckInCreate fpr))) =
-  processCheckInCreate fpr
+process (Cli Nothing (CheckIn (CheckInCreate n))) = do
+  putStr $ "Please password for " ++ n ++ ": "
+  p <- getLine
+  processCheckInCreate n p
 
 process (Cli Nothing (CheckIn CheckInList)) = do
   putStrLn "CheckIn List command here"

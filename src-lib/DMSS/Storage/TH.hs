@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : untested
 --
--- Dead Man Switch System storage types
+-- Dead Man Switch System storage schema
 --
 {-# LANGUAGE EmptyDataDecls             #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -27,7 +27,7 @@ share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User
   name Name                   -- ^ User's name
   passwordStore PassHash      -- ^ Password storage hash
-  keypairStore  KeypairStore  -- ^ Keypair stored as seed
+  boxKeypairStore  BoxKeypairStore  -- ^ Keypair stored as seed
   UniqueName name
   created Int                 -- ^ POSIX time
 CheckIn

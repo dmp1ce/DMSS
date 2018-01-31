@@ -14,14 +14,17 @@ module DMSS.CLI.Internal where
 
 --import DMSS.Config
 import DMSS.Storage ( storeUser
+                    , listUsers
+                    , removeUser
                     , Name (..)
                     , PassHash (..)
                     )
---                    , removeUserKey
 --                    , storeCheckIn
 --                    , Fingerprint (..)
 --                    , CheckInProof (..)
 --                   )
+import DMSS.Storage.TH ( User (userName) )
+import DMSS.Crypto
 
 --import Data.Maybe (fromJust)
 --import Text.Email.Validate
@@ -35,9 +38,16 @@ import Crypto.Lithium.Password  ( storePassword
                                 , derive
                                 )
 import Crypto.Lithium.SecretBox (Key)
+import qualified Crypto.Lithium.Box  as B
+--import qualified Crypto.Lithium.Unsafe.Box  as UB
+--import qualified Crypto.Lithium.Sign as S
+--import Data.ByteString
 
 --import Crypto.Lithium.Password
 --import Crypto.Lithium.Box
+
+import Database.Persist.Types ( Entity (..) )
+
 
 -- | Create a user ID
 processIdCreate :: String         -- ^ Name
@@ -51,15 +61,24 @@ processIdCreate n password = do
   salt <- newSalt
   let symmetricKey = (derive (fromString password) salt sensitivePolicy :: Key)
 
+  -- TODO: Seed could be exported as a mnemonic so identity could be restored on another device
   -- Create keypair seed and encrypt it for later use
-  print symmetricKey
+  -- seed <- newSeed
 
+  -- Create keypair for encrypting and signing
+  kp_box  <- B.newKeypair
+  --let secretBA = B.secretKey kp_box
+  --let secretBA' = (UB.fromSecretKey secretBA) :: ByteString
+  --kp_sign <- S.newKeypair
+  --print secretBA
+  --print secretBA'
+
+  print symmetricKey
   print passStore
 
-  -- Store Id
-  --_ <- storeUser (Name n) (PassHash (show passStore))
-  _ <- storeUser (Name n) (PassHash passStore)
-
+  -- Encrypt private keys for storage and store for later
+  kpStore <- encryptBoxKeypair symmetricKey kp_box
+  _ <- storeUser (Name n) (PassHash passStore) kpStore
   return "nothing"
 
 --processIdCreate n e = do
@@ -80,11 +99,15 @@ processIdCreate n password = do
 --      eitherFpr
 --  return $ show ret
 
--- | List the existing user IDs
+
+-- | List the existing users
 processIdList :: IO String
-processIdList = undefined
-  --l <- gpgContext
-  --res <- withCtx l "C" OpenPGP $ \ctx -> listKeys ctx WithSecret
+processIdList = do
+  -- TODO: Remove hardcoded max size
+  userDBEntities <- listUsers 10
+  let userNames = (userName . entityVal) <$> userDBEntities
+  return $ show userNames
+
   --ids <- mapM (\k -> do
   --            i <- keyUserIds' k
   --            s <- keySubKeys' k
@@ -112,11 +135,13 @@ processIdList = undefined
     --  where
     --    cc f l = unwords (foldr (\n a -> (f n):a) [] l)
 
-processIdRemove :: String    -- ^ Fingerprint
+
+processIdRemove :: String    -- ^ Name
                 -> IO (Maybe String)
-processIdRemove _ = undefined --do
+processIdRemove n = do
   -- Remove from Storage
-  --removeUserKey (Fingerprint fpr)
+  removeUser (Name n)
+  return Nothing
 
   --l <- gpgContext
   --ret <- withCtx l "C" OpenPGP $ \ctx -> do
@@ -128,7 +153,8 @@ processIdRemove _ = undefined --do
   --  Nothing  -> return $ Nothing
   --  (Just e) -> return $ Just $ show e
 
-processCheckInCreate :: String -- ^ Fingerprint
+processCheckInCreate :: String -- ^ Name
+                     -> String -- ^ Password
                      -> IO ()
 processCheckInCreate _ = undefined --do
   --l <- gpgContext
