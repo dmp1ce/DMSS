@@ -22,13 +22,14 @@ import Data.Text ( Text, append )
 import Database.Persist ( PersistField, fromPersistValue, toPersistValue )
 import Database.Persist.Sql ( PersistFieldSql, sqlType )
 import Database.Persist.Types ( PersistValue (PersistList, PersistByteString), SqlType (SqlString) )
+import qualified Data.ByteString.Base64 as B64
 
 -- For testing
 import           Test.QuickCheck  ( Arbitrary (..)
                                   , arbitrary
-                                  , Gen
-                                  , listOf
-                                  , elements
+--                                  , Gen
+--                                  , listOf
+--                                  , elements
                                   )
 
 
@@ -99,23 +100,16 @@ newtype Silent = Silent { unSilent :: Bool }
 
 -- For testing
 
--- Generate some 'safe' strings
--- https://stackoverflow.com/a/20936497/350221
-genSafeChar :: Gen Char
-genSafeChar = elements (['a'..'z'] ++ ['0'..'9'] ++
-  ['$','\\','#','/','%','@','!'])
-genSafeString :: Gen String
-genSafeString = listOf genSafeChar
-
--- KeypairStores should never be a non visible characters
+-- KeypairStores should be base64 encoded to prevent characters with special functions
 instance Arbitrary BoxKeypairStore where
   arbitrary = do
-    s <- genSafeString
-    p <- genSafeString
-    return $ BoxKeypairStore (toS s) (toS p)
-
+    s <- arbitrary
+    p <- arbitrary
+    return $ BoxKeypairStore ((B64.encode . toS) (s::String))
+                             ((B64.encode . toS) (p::String))
 instance Arbitrary SignKeypairStore where
   arbitrary = do
-    s <- genSafeString
-    p <- genSafeString
-    return $ SignKeypairStore (toS s) (toS p)
+    s <- arbitrary
+    p <- arbitrary
+    return $ SignKeypairStore ((B64.encode . toS) (s::String))
+                              ((B64.encode . toS) (p::String))
