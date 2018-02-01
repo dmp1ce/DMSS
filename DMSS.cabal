@@ -38,6 +38,7 @@ library
                    , DMSS.Storage.TH
                    , DMSS.Common
                    , DMSS.Crypto
+                   , Paths_DMSS
   build-depends:     base >= 4.8 && < 5
                    , daemons
                    , data-default
