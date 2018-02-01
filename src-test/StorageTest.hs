@@ -1,10 +1,7 @@
 module StorageTest (tests) where
 
-import Crypto.Lithium.Types ( toPlaintext )
-import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
 import Data.ByteString.Char8 (pack)
 import Data.List ( sort )
-import Data.Maybe ( fromJust )
 import qualified Database.Persist.Sqlite as P
 import DMSS.Storage
   ( storeCheckIn
@@ -45,7 +42,7 @@ tempDir = "storageTest"
 
 
 dummyPassHash :: PassHash
-dummyPassHash = fromJust $ PassHash . PasswordString <$> (toPlaintext . pack $ "$argon2id$v=19$m=1048576,t=4,p=1$p4S9shWCYwIX1zTKxWrblQ$nJx1a6Yg3jJwvP+d8nBU+dkFYqM3LlnfhMh01OMbD4Q\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL")
+dummyPassHash = PassHash . pack $ "$argon2id$v=19$m=1048576,t=4,p=1$p4S9shWCYwIX1zTKxWrblQ$nJx1a6Yg3jJwvP+d8nBU+dkFYqM3LlnfhMh01OMbD4Q\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL"
 
 
 dummyBoxKeypairStore :: BoxKeypairStore

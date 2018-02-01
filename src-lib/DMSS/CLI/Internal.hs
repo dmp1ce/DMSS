@@ -17,7 +17,6 @@ import DMSS.Storage ( storeUser
                     , listUsers
                     , removeUser
                     , Name (..)
-                    , PassHash (..)
                     , User (..)
                     , BoxKeypairStore (..)
                     , SignKeypairStore (..)
@@ -26,6 +25,7 @@ import DMSS.Storage ( storeUser
 --                    , Fingerprint (..)
 --                    , CheckInProof (..)
 --                   )
+import DMSS.Storage.Types ( toPassHash )
 import DMSS.Crypto
 
 --import Data.Maybe (fromJust)
@@ -80,7 +80,7 @@ processIdCreate n password = do
   -- Encrypt private keys for storage and store for later
   kpbStore <- encryptBoxKeypair symmetricKey kp_box
   kpsStore <- encryptSignKeypair symmetricKey kp_sign
-  r <- storeUser (Name n) (PassHash passStore) kpbStore kpsStore
+  r <- storeUser (Name n) (toPassHash passStore) kpbStore kpsStore
   return (show r)
 
 --processIdCreate n e = do

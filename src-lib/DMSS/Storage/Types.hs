@@ -11,6 +11,7 @@
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module DMSS.Storage.Types where
 
@@ -22,7 +23,7 @@ import Data.Text ( Text, append )
 import Database.Persist ( PersistField, fromPersistValue, toPersistValue )
 import Database.Persist.Sql ( PersistFieldSql, sqlType )
 import Database.Persist.Types
-   ( PersistValue (PersistList, PersistByteString)
+   ( PersistValue (PersistList)
    , SqlType (SqlString)
    )
 import qualified Data.ByteString.Base64 as B64
@@ -40,25 +41,17 @@ import Test.QuickCheck
 newtype Name = Name { unName :: String } deriving (Show, PersistField, PersistFieldSql)
 
 
-newtype PassHash = PassHash { unPassHash :: PasswordString }
+newtype PassHash = PassHash { unPassHash :: ByteString }
+   deriving (PersistField, PersistFieldSql)
 
-instance PersistField PassHash where
-  toPersistValue :: PassHash -> PersistValue
-  toPersistValue = PersistByteString . fromPlaintext . unSized . unPasswordString . unPassHash
+toPassHash :: PasswordString -> PassHash
+toPassHash = PassHash . fromPlaintext . unSized . unPasswordString
 
-  fromPersistValue :: PersistValue -> Either Text PassHash
-  fromPersistValue (PersistByteString bs) = maybe
-    (deserializePassHashErrorMsg . toS $ bs)
-    (Right . PassHash . PasswordString)
-    $ toPlaintext bs
-  fromPersistValue perVal= deserializePassHashErrorMsg . toS . show $ perVal
-
-deserializePassHashErrorMsg :: Text -> Either Text a
-deserializePassHashErrorMsg = Left . append (toS
-  "Reading password hash from database failed because we cannot parse this data: ")
-
-instance PersistFieldSql PassHash where
-  sqlType _ = SqlString
+fromPassHash :: PassHash -> Either Text PasswordString
+fromPassHash (PassHash bs) = maybe
+  (Left . append "Reading password hash from database failed because we cannot parse this data: " . toS $ bs)
+  (Right . PasswordString)
+  $ toPlaintext bs
 
 
 newtype Password = Password String deriving Show
