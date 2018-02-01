@@ -15,9 +15,11 @@
 
 module DMSS.Storage.Types where
 
-import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
+import Crypto.Lithium.Password ( storePassword, sensitivePolicy )
 import Crypto.Lithium.Types ( Sized (unSized), fromPlaintext, toPlaintext )
+import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
 import Data.ByteString ( ByteString )
+import Data.String (fromString)
 import Data.String.Conv ( toS )
 import Data.Text ( Text, append )
 import Database.Persist ( PersistField, fromPersistValue, toPersistValue )
@@ -27,6 +29,7 @@ import Database.Persist.Types
    , SqlType (SqlString)
    )
 import qualified Data.ByteString.Base64 as B64
+import System.IO.Unsafe ( unsafePerformIO )
 
 -- For testing
 import Test.QuickCheck
@@ -42,11 +45,33 @@ newtype Name = Name { unName :: String } deriving (Show, PersistField, PersistFi
 
 
 newtype PassHash = PassHash { unPassHash :: ByteString }
-   deriving (PersistField, PersistFieldSql)
+   deriving (Eq, PersistField, PersistFieldSql, Show)
 
+
+{- | Hash a password into a PassHash
+
+   This type is our internal representation of a hashed password, so we may
+   store it easily.
+-}
+hashPassword :: String -> PassHash
+hashPassword = toPassHash . unsafePerformIO . storePassword sensitivePolicy
+  . fromString
+
+
+{- | Convert a PasswordString to a PassHash
+
+   PasswordString is the internal representation of a hashed password for the
+   lithium library. This function converts one to our data structure.
+-}
 toPassHash :: PasswordString -> PassHash
 toPassHash = PassHash . fromPlaintext . unSized . unPasswordString
 
+
+{- | Convert a PassHash to a PasswordString
+
+   PasswordString is the internal representation of a hashed password for the
+   lithium library. This function converts our PassHash type to it.
+-}
 fromPassHash :: PassHash -> Either Text PasswordString
 fromPassHash (PassHash bs) = maybe
   (Left . append "Reading password hash from database failed because we cannot parse this data: " . toS $ bs)

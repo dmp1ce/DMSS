@@ -18,9 +18,10 @@ import DMSS.Storage.Types
   , PassHash (..)
   , Silent (..)
   , SignKeypairStore (..)
+  , fromPassHash, hashPassword, toPassHash
   )
-import Test.Tasty ( TestTree )
-import Test.Tasty.HUnit ( Assertion, assertFailure, testCase )
+import Test.Tasty ( TestTree, testGroup )
+import Test.Tasty.HUnit ( Assertion, (@?=), assertFailure, testCase )
 import qualified Test.Tasty.QuickCheck as QC
 
 import Common ( withTemporaryTestDirectory )
@@ -31,6 +32,7 @@ tests =
   [ testCase "store_user_key_test" storeUserTest
   , testCase "store_check_in_test" storeCheckInTest
   , testCase "remove_user_key_test" removeUserKeyTest
+  , toFromPassHash
   , QC.testProperty "prop_userStorage_BoxKeypairStore"
       prop_userStorage_BoxKeypairStore
   , QC.testProperty "prop_userStorage_SignKeypairStore"
@@ -104,6 +106,20 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
       then return ()
       else assertFailure "CheckIns were not in decending order"
   )
+
+
+toFromPassHash :: TestTree
+toFromPassHash = testGroup "Round-trip between PasswordString and PassHash"
+  [ tc ("A short, awful password",  "foobar")
+  , tc ("A decent password",        "c%fxBQRe]2L]|#q'")
+  , tc ("A passphrase",             "obese page rivet gurgle ring twin usia befit olsen")
+  ]
+
+  where
+    tc (desc, password) =
+      testCase desc $ (toPassHash <$> fromPassHash ph) @?= (Right ph)
+      where ph = hashPassword password
+
 
 -- Ensure data that goes into Persistence comes out the same
 prop_userStorage_BoxKeypairStore :: BoxKeypairStore -> Bool
