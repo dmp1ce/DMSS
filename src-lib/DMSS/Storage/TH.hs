@@ -31,6 +31,7 @@ User
   signKeypairStore  SignKeypairStore  -- ^ Keypair stored as seed
   UniqueName name
   created Int                 -- ^ POSIX time
+  deriving Show
 CheckIn
   userId UserId
   raw_data String

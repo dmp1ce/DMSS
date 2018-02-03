@@ -14,6 +14,9 @@ module DMSS.CLI where
 import           DMSS.CLI.Command
 import qualified DMSS.Daemon.Command as DCLI
 import           DMSS.CLI.Internal
+import           DMSS.Storage ( Name (..))
+
+import Data.String ( fromString )
 
 import           System.Daemon (runClient)
 import           System.Environment (setEnv)
@@ -109,9 +112,9 @@ process (Cli Nothing (Id (IdRemove fpr))) = do
     Just s -> putStrLn s
 
 process (Cli Nothing (CheckIn (CheckInCreate n))) = do
-  putStr $ "Please password for " ++ n ++ ": "
+  putStrLn $ "Please enter password for " ++ n ++ ": "
   p <- getLine
-  processCheckInCreate n p
+  processCheckInCreate (Name n) (fromString p)
 
 process (Cli Nothing (CheckIn CheckInList)) = do
   putStrLn "CheckIn List command here"

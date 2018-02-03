@@ -18,11 +18,13 @@ module DMSS.Storage ( storeCheckIn
                     , UserId
                     , CheckInProof (..)
                     , Name (..)
+                    , Password (..)
                     , PassHash (..)
                     , BoxKeypairStore (..)
                     , SignKeypairStore (..)
                     , dbConnectionString
                     , User (..)
+                    , runStorage
                     )
   where
 
@@ -73,6 +75,13 @@ getUserKey :: Silent  -- ^ is silent and no pool?
            -> IO (Maybe (Key User))
 getUserKey (Silent True) n = runStorage $ getUserKeyDBActions n
 getUserKey (Silent False) n = runStoragePool $ getUserKeyDBActions n
+
+-- | Get User
+--getUser :: Silent  -- ^ is silent and no pool?
+--        -> Name    -- ^ User's name
+--        -> IO (Maybe User)
+--getUser (Silent True) n = runStorage $ getUserDBActions n
+--getUser (Silent False) n = runStoragePool $ getUserDBActions n
 
 -- | List the last `Int` users sorted by date
 listUsers :: Int -> IO [User]

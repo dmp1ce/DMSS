@@ -14,14 +14,14 @@
 
 module DMSS.Storage.Types where
 
-import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
-import Crypto.Lithium.Types ( Sized (unSized), fromPlaintext, toPlaintext )
+import qualified Crypto.Lithium.Password as LP
+import Crypto.Lithium.Types ( fromPlaintext, toPlaintext, BytesN )
 import Data.ByteString ( ByteString )
 import Data.String.Conv ( toS )
 import Data.Text ( Text, append )
 import Database.Persist ( PersistField, fromPersistValue, toPersistValue )
 import Database.Persist.Sql ( PersistFieldSql, sqlType )
-import Database.Persist.Types ( PersistValue (PersistList, PersistByteString), SqlType (SqlString) )
+import Database.Persist.Types ( PersistValue (PersistList), SqlType (SqlString) )
 import qualified Data.ByteString.Base64 as B64
 
 -- For testing
@@ -36,18 +36,39 @@ import           Test.QuickCheck  ( Arbitrary (..)
 newtype Name = Name { unName :: String } deriving (Show, PersistField, PersistFieldSql)
 
 
-newtype PassHash = PassHash { unPassHash :: PasswordString }
+data PassHash = PassHash { unPassHash :: LP.PasswordString
+                         , unSalt :: LP.Salt } deriving Show
 
 instance PersistField PassHash where
   toPersistValue :: PassHash -> PersistValue
-  toPersistValue = PersistByteString . fromPlaintext . unSized . unPasswordString . unPassHash
+  toPersistValue (PassHash p s) =
+    PersistList [ toPersistValue $ ((fromPlaintext $ LP.unPasswordString p) :: ByteString)
+                , toPersistValue $ ((fromPlaintext $ LP.unSalt s) :: ByteString) ]
 
   fromPersistValue :: PersistValue -> Either Text PassHash
-  fromPersistValue (PersistByteString bs) = maybe
-    (deserializePassHashErrorMsg . toS $ bs)
-    (Right . PassHash . PasswordString)
-    $ toPlaintext bs
-  fromPersistValue perVal= deserializePassHashErrorMsg . toS . show $ perVal
+  fromPersistValue v = case fromPersistValue v of
+    Right (p:s:[]) ->
+      let eP = fromPersistValue p :: Either Text ByteString
+          eS = fromPersistValue s :: Either Text ByteString
+          ePS = (,) <$> eP <*> eS
+      in case ePS of
+        Right (p',s') ->
+          let mP = toPlaintext p' :: Maybe (BytesN LP.PasswordStringBytes)
+              mS = toPlaintext s' :: Maybe (BytesN LP.SaltBytes)
+              mPS = (,) <$> mP <*> mS :: Maybe (BytesN LP.PasswordStringBytes, BytesN LP.SaltBytes)
+          in case mPS of
+            Just (p'',s'') -> Right $ PassHash (LP.PasswordString p'')  (LP.Salt s'')
+            Nothing -> undefined
+        Left t  -> Left . toS $ show t
+        
+    Left t  -> Left . toS $ show t
+    Right r -> Left . toS $ "Did not recieve the expected two values."
+                             ++ show r
+  --fromPersistValue (PersistByteString bs) = maybe
+  --  (deserializePassHashErrorMsg . toS $ bs)
+  --  (Right . PassHash . PasswordString)
+  --  $ toPlaintext bs
+  --fromPersistValue perVal= deserializePassHashErrorMsg . toS . show $ perVal
 
 deserializePassHashErrorMsg :: Text -> Either Text a
 deserializePassHashErrorMsg = Left . append (toS
@@ -76,8 +97,8 @@ instance PersistFieldSql BoxKeypairStore where
   sqlType _ = SqlString
 
 data SignKeypairStore = SignKeypairStore { signSecretKeyStore :: ByteString
-                                       , signPublicKeyStore :: ByteString
-                                       } deriving (Show, Eq)
+                                         , signPublicKeyStore :: ByteString
+                                         } deriving (Show, Eq)
 
 instance PersistField SignKeypairStore where
   toPersistValue (SignKeypairStore sk pk) =

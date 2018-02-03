@@ -21,16 +21,24 @@ import DMSS.Storage ( storeUser
                     , User (..)
                     , BoxKeypairStore (..)
                     , SignKeypairStore (..)
+                    , runStorage
                     )
 --                    , storeCheckIn
 --                    , Fingerprint (..)
 --                    , CheckInProof (..)
 --                   )
 import DMSS.Crypto
+--import DMSS.Storage.Types ( Silent (..))
+--import           DMSS.Storage.Types
+import DMSS.Storage.TH ( Unique (..) )
+import Database.Esqueleto ( Entity(..)
+                          , getBy )
 
 --import Data.Maybe (fromJust)
 --import Text.Email.Validate
 --import Data.Default (def)
+import System.Exit (die)
+import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8  as BS8
 import qualified Text.PrettyPrint       as PP
 import Data.String (fromString)
@@ -38,7 +46,10 @@ import Crypto.Lithium.Password  ( storePassword
                                 , sensitivePolicy
                                 , newSalt
                                 , derive
+                                , Password (..)
+                                , verifyPassword
                                 )
+import Crypto.Lithium.Types (fromPlaintext)
 import qualified Crypto.Lithium.SecretBox as SB
 import qualified Crypto.Lithium.Box       as B
 import qualified Crypto.Lithium.Sign      as S
@@ -80,7 +91,7 @@ processIdCreate n password = do
   -- Encrypt private keys for storage and store for later
   kpbStore <- encryptBoxKeypair symmetricKey kp_box
   kpsStore <- encryptSignKeypair symmetricKey kp_sign
-  r <- storeUser (Name n) (PassHash passStore) kpbStore kpsStore
+  r <- storeUser (Name n) (PassHash passStore salt) kpbStore kpsStore
   return (show r)
 
 --processIdCreate n e = do
@@ -143,11 +154,32 @@ processIdRemove n = do
   --  Nothing  -> return $ Nothing
   --  (Just e) -> return $ Just $ show e
 
-processCheckInCreate :: String -- ^ Name
-                     -> String -- ^ Password
+processCheckInCreate :: Name     -- ^ Name
+                     -> Password -- ^ Password
                      -> IO ()
-processCheckInCreate _ = undefined --do
-  --l <- gpgContext
+processCheckInCreate n p = runStorage $ do
+  -- Verify password is correct for user
+  maybeUser <- getBy $ UniqueName n
+  user <- case maybeUser of
+    Nothing -> liftIO $ die $ "User " ++ (unName n) ++ " not found."
+    Just (Entity _ u) -> return u
+
+  --verifyPassword   
+  let passHash = (unPassHash . userPasswordStore) user
+      symmSalt = (unSalt . userPasswordStore) user
+      symmKey = derive p symmSalt sensitivePolicy
+      signKeyStore = (userSignKeypairStore) user
+  if verifyPassword passHash p
+  then case (decryptSignKeypair symKey signKeyStore) of
+    Just _ -> liftIO $ putStrLn "Unlocked Sign keypair"
+    Nothing -> liftIO $ die "Sign keypair failed to open."
+  else liftIO $ die $ "Incorrect password for " ++ (unName n) ++ "."
+
+  -- Decrypt Sign keypair with symmetric
+
+  -- Make a signed message proving current time
+  -- TODO: Get the latest bitcoin block hash to prove current time
+
   --eitherCT <- withCtx l "C" OpenPGP $ \ctx -> do
   --  maybeKey <- getKey ctx (C.pack fpr) WithSecret
   --  let key = maybe (error ("Invalid key id " ++ fpr)) id maybeKey
