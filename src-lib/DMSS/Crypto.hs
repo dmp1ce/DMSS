@@ -8,6 +8,9 @@
 --
 -- Dead Man Switch System crypto functions
 --
+--{-# LANGUAGE PartialTypeSignatures #-}
+
+{-# LANGUAGE DataKinds #-}
 module DMSS.Crypto where
 
 import DMSS.Storage ( BoxKeypairStore (..)
@@ -22,6 +25,7 @@ import           Crypto.Lithium.SecretBox ( Key
                                           )
 import qualified Crypto.Lithium.Box as B
 import qualified Crypto.Lithium.Sign as S
+import qualified Crypto.Lithium.Unsafe.Sign as SU
 import qualified Crypto.Lithium.SecretBox as SB
 import           Crypto.Lithium.Unsafe.Types ( Plaintext (..)
                                              , Secret (..)
@@ -46,10 +50,16 @@ encryptSignKeypair symKey (S.Keypair sk pk) = do
 
 decryptSignKeypair :: Key -> SignKeypairStore -> Either String S.Keypair
 decryptSignKeypair symKey (SignKeypairStore ske pk) =
-  case B64.decode ske of
-    Right ske' ->
-      -- :: Maybe (Sized n ScrubbedBytes) of
-      case openSecretBox symKey (SB.SecretBox ske') of
-        Just k -> undefined
-        Nothing -> Left undefined
-    Left e     -> Left e
+  let eSK =
+        case B64.decode ske of
+          Right ske' ->
+            case (openSecretBox symKey (SB.SecretBox ske')
+                 :: Maybe (Sized SU.SecretKeyBytes ScrubbedBytes)) of
+              Just sk -> Right $ S.SecretKey $ Conceal sk
+              Nothing -> Left "Failed to decrypt secret key"
+          Left e     -> Left e
+      ePK = case toPlaintext <$> B64.decode pk of
+              Right (Just pk') -> Right $ S.PublicKey pk'
+              Right Nothing    -> Left "Failed to decode public key"
+              Left e           -> Left e
+   in S.Keypair <$> eSK <*> ePK

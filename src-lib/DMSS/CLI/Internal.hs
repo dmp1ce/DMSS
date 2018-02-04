@@ -34,6 +34,7 @@ import DMSS.Storage.TH ( Unique (..) )
 import Database.Esqueleto ( Entity(..)
                           , getBy )
 
+import Data.String.Conv ( toS )
 --import Data.Maybe (fromJust)
 --import Text.Email.Validate
 --import Data.Default (def)
@@ -49,10 +50,10 @@ import Crypto.Lithium.Password  ( storePassword
                                 , Password (..)
                                 , verifyPassword
                                 )
-import Crypto.Lithium.Types (fromPlaintext)
 import qualified Crypto.Lithium.SecretBox as SB
 import qualified Crypto.Lithium.Box       as B
 import qualified Crypto.Lithium.Sign      as S
+--import Crypto.Lithium.Types (toPlaintext)
 --import qualified Crypto.Lithium.Unsafe.Box  as UB
 --import qualified Crypto.Lithium.Sign as S
 --import Data.ByteString
@@ -170,9 +171,16 @@ processCheckInCreate n p = runStorage $ do
       symmKey = derive p symmSalt sensitivePolicy
       signKeyStore = (userSignKeypairStore) user
   if verifyPassword passHash p
-  then case (decryptSignKeypair symKey signKeyStore) of
-    Just _ -> liftIO $ putStrLn "Unlocked Sign keypair"
-    Nothing -> liftIO $ die "Sign keypair failed to open."
+  then case (decryptSignKeypair symmKey signKeyStore) of
+    Right (S.Keypair secr pub) -> liftIO $ do
+      putStrLn "Unlocked Sign keypair"
+      print secr
+      putStrLn "Signing and printing test message"
+      let signedMessage = S.sign' secr (toS "Test message here!" :: BS8.ByteString)
+      print $ S.unSigned signedMessage
+      putStrLn "Verifying signature"
+      print $ S.openSigned pub signedMessage
+    Left e  -> liftIO $ die e
   else liftIO $ die $ "Incorrect password for " ++ (unName n) ++ "."
 
   -- Decrypt Sign keypair with symmetric
