@@ -2,34 +2,29 @@
 
 module BlockTimeTest (tests) where
 
-import DMSS.BlockTime ( getBlockTime, getLatestBlock )
+import DMSS.BlockTime.BlockTime ( getBlockTime, getLatestBlock )
+import DMSS.BlockTime.Types ( BTCBlock (blHash) )
 
 import Test.Tasty ( TestTree )
 import Test.Tasty.HUnit ( Assertion, assertFailure, testCase )
+import Text.Printf ( printf )
 
 
 
 tests :: [TestTree]
 tests =
-  [ testCase "get latest Bitcoin block" getLatestBlockTest
-  , testCase "get timestamp for a block" getBlockTimeTest
+  [ testCase "get info about latest Bitcoin block" blockTimeTest
   ]
 
 
-getLatestBlockTest :: Assertion
-getLatestBlockTest = do
-  actual <- getLatestBlock
+blockTimeTest :: Assertion
+blockTimeTest = do
+  eLatestBlock <- getLatestBlock
+  putStrLn $ "\n      Latest BTC block: " ++ (show eLatestBlock)
 
-  case actual of
-    Right block -> print block
-    Left e -> assertFailure . show $ e
-
-
-getBlockTimeTest :: Assertion
-getBlockTimeTest = do
-  actual <- getBlockTime
-    "00000000000000000062d9da0f214fc674fdd60cfdfd745c2b5a4baff91987ed"
-
-  case actual of
-    Right time -> print time
+  case eLatestBlock of
+    Right lb -> do
+      let hash = blHash lb
+      eTimeOfBlock <- getBlockTime hash
+      printf "      Timestamp of block %s: %s\n" hash (show eTimeOfBlock)
     Left e -> assertFailure . show $ e

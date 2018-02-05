@@ -27,7 +27,11 @@ library
   default-language:  Haskell2010
   ghc-options:       -Wall -Werror -O2
   hs-source-dirs:    src-lib
-  exposed-modules:   DMSS.BlockTime
+  exposed-modules:   DMSS.BlockTime.BitcoinchainCom
+                   , DMSS.BlockTime.BlockchainInfo
+                   , DMSS.BlockTime.BlockTime
+                   , DMSS.BlockTime.BtcCom
+                   , DMSS.BlockTime.Types
                    , DMSS.Daemon
                    , DMSS.Daemon.Command
                    , DMSS.CLI
@@ -71,6 +75,7 @@ library
                    , lens
                    , aeson
                    , safe-exceptions
+                   , vector
 
 executable dmss
   default-language:  Haskell2010
