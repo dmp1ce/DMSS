@@ -19,25 +19,18 @@ import DMSS.Storage ( storeUser
                     , Name (..)
                     , PassHash (..)
                     , User (..)
+                    , mkCheckInProof
                     , BoxKeypairStore (..)
                     , SignKeypairStore (..)
                     , runStorage
+                    , storeCheckIn
                     )
---                    , storeCheckIn
---                    , Fingerprint (..)
---                    , CheckInProof (..)
---                   )
 import DMSS.Crypto
---import DMSS.Storage.Types ( Silent (..))
---import           DMSS.Storage.Types
 import DMSS.Storage.TH ( Unique (..) )
 import Database.Esqueleto ( Entity(..)
                           , getBy )
 
 import Data.String.Conv ( toS )
---import Data.Maybe (fromJust)
---import Text.Email.Validate
---import Data.Default (def)
 import System.Exit (die)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8  as BS8
@@ -53,24 +46,17 @@ import Crypto.Lithium.Password  ( storePassword
 import qualified Crypto.Lithium.SecretBox as SB
 import qualified Crypto.Lithium.Box       as B
 import qualified Crypto.Lithium.Sign      as S
---import Crypto.Lithium.Types (toPlaintext)
---import qualified Crypto.Lithium.Unsafe.Box  as UB
---import qualified Crypto.Lithium.Sign as S
---import Data.ByteString
-
---import Crypto.Lithium.Password
---import Crypto.Lithium.Box
 
 -- | Create a user ID
 processIdCreate :: String         -- ^ Name
                 -> String         -- ^ Password
                 -> IO String
-processIdCreate n password = do
+processIdCreate n password = runStorage $ do
   -- Create hash so that I know if the password is correct
-  passStore <- storePassword sensitivePolicy (fromString password)
+  passStore <- liftIO $ storePassword sensitivePolicy (fromString password)
 
   -- Derive symmetric key with password.
-  salt <- newSalt
+  salt <- liftIO $ newSalt
   let symmetricKey = (derive (fromString password) salt sensitivePolicy :: SB.Key)
 
   -- TODO: Seed could be exported as a mnemonic so identity could be restored on another device
@@ -78,8 +64,8 @@ processIdCreate n password = do
   -- seed <- newSeed
 
   -- Create keypair for encrypting and signing
-  kp_box  <- B.newKeypair
-  kp_sign <- S.newKeypair
+  kp_box  <- liftIO $ B.newKeypair
+  kp_sign <- liftIO $ S.newKeypair
   --let secretBA = B.secretKey kp_box
   --let secretBA' = (UB.fromSecretKey secretBA) :: ByteString
   --kp_sign <- S.newKeypair
@@ -90,29 +76,10 @@ processIdCreate n password = do
   --print passStore
 
   -- Encrypt private keys for storage and store for later
-  kpbStore <- encryptBoxKeypair symmetricKey kp_box
-  kpsStore <- encryptSignKeypair symmetricKey kp_sign
+  kpbStore <- liftIO $ encryptBoxKeypair symmetricKey kp_box
+  kpsStore <- liftIO $ encryptSignKeypair symmetricKey kp_sign
   r <- storeUser (Name n) (PassHash passStore salt) kpbStore kpsStore
   return (show r)
-
---processIdCreate n e = do
---  -- Create GPG id
---  l <- gpgContext
---  let params = (def :: G.GenKeyParams)
---        { G.keyType = Just Dsa
---        , G.nameReal = C.pack n
---        , G.nameEmail = (emailAddress . C.pack) $ maybe "" id e
---        }
---  createLocalDirectory
---  ret <- withCtx l "C" OpenPGP $ \ctx -> do
---    eitherFpr <- G.genKey ctx params
---    either (\_ -> return ("genKey failed with return: " ++ show eitherFpr))
---      (\fpr -> do
---          s <- storeUserKey $ Fingerprint $ C.unpack fpr
---          return $ show s)
---      eitherFpr
---  return $ show ret
-
 
 -- | List the existing users
 processIdList :: IO String
@@ -140,20 +107,10 @@ processIdList = do
 
 processIdRemove :: String    -- ^ Name
                 -> IO (Maybe String)
-processIdRemove n = do
+processIdRemove n = runStorage $ do
   -- Remove from Storage
   removeUser (Name n)
   return Nothing
-
-  --l <- gpgContext
-  --ret <- withCtx l "C" OpenPGP $ \ctx -> do
-  --  key <- getKey ctx (C.pack fpr) WithSecret
-
-  --  -- Remove from GPG context
-  --  removeKey ctx (fromJust key) WithSecret
-  --case ret of
-  --  Nothing  -> return $ Nothing
-  --  (Just e) -> return $ Just $ show e
 
 processCheckInCreate :: Name     -- ^ Name
                      -> Password -- ^ Password
@@ -165,23 +122,28 @@ processCheckInCreate n p = runStorage $ do
     Nothing -> liftIO $ die $ "User " ++ (unName n) ++ " not found."
     Just (Entity _ u) -> return u
 
-  --verifyPassword   
   let passHash = (unPassHash . userPasswordStore) user
       symmSalt = (unSalt . userPasswordStore) user
       symmKey = derive p symmSalt sensitivePolicy
       signKeyStore = (userSignKeypairStore) user
-  if verifyPassword passHash p
+  sMessage <- if verifyPassword passHash p
+  -- Decrypt keypair
   then case (decryptSignKeypair symmKey signKeyStore) of
-    Right (S.Keypair secr pub) -> liftIO $ do
+    Right (S.Keypair secr _) -> liftIO $ do
       putStrLn "Unlocked Sign keypair"
       print secr
       putStrLn "Signing and printing test message"
-      let signedMessage = S.sign' secr (toS "Test message here!" :: BS8.ByteString)
-      print $ S.unSigned signedMessage
-      putStrLn "Verifying signature"
-      print $ S.openSigned pub signedMessage
+      -- Sign message
+      return $ S.sign' secr (toS "Test message here!fefeijfeifjeifejfiejfiefeifjejifeifejifiejeijfj" :: BS8.ByteString)
+
+      --print $ S.unSigned signedMessage
+      --putStrLn "Verifying signature"
+      --print $ S.openSigned pub signedMessage
     Left e  -> liftIO $ die e
   else liftIO $ die $ "Incorrect password for " ++ (unName n) ++ "."
+
+  _ <- storeCheckIn n (mkCheckInProof $ S.unSigned sMessage)
+  return ()
 
   -- Decrypt Sign keypair with symmetric
 

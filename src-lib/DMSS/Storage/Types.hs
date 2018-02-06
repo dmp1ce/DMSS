@@ -112,9 +112,11 @@ instance PersistField SignKeypairStore where
 instance PersistFieldSql SignKeypairStore where
   sqlType _ = SqlString
 
-
-newtype CheckInProof = CheckInProof { unCheckInProof :: String }
-
+newtype CheckInProof = CheckInProof ByteString
+mkCheckInProof :: ByteString -> CheckInProof
+mkCheckInProof = CheckInProof . B64.encode
+unCheckInProof :: CheckInProof -> ByteString
+unCheckInProof (CheckInProof p) = either (const p) id (B64.decode p)
 
 newtype Silent = Silent { unSilent :: Bool }
 

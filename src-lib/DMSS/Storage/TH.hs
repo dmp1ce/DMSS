@@ -22,6 +22,7 @@ module DMSS.Storage.TH where
 
 import           Database.Persist.TH
 import           DMSS.Storage.Types
+import qualified Data.ByteString.Char8  as BS8
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User
@@ -34,7 +35,7 @@ User
   deriving Show
 CheckIn
   userId UserId
-  raw_data String
+  raw_data BS8.ByteString
   created Int                 -- ^ POSIX time
   deriving Show
 |]

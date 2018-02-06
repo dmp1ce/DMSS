@@ -10,6 +10,7 @@ import DMSS.CLI.Internal
 import DMSS.Storage
 import DMSS.Common
 import DMSS.Storage.Types
+import Data.String (fromString)
 
 tests :: [TestTree]
 tests =
@@ -29,7 +30,7 @@ verifyCheckInTest = undefined
     _ <- processIdCreate name pass
 
     -- Checkin
-    _ <- processCheckInCreate name pass
+    _ <- processCheckInCreate (Name name) (fromString pass)
 
     -- Get last checkin
     l <- listCheckIns (Name name) 1

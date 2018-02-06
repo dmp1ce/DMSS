@@ -16,7 +16,9 @@ module DMSS.Storage ( storeCheckIn
                     , removeUser
                     , CheckInId
                     , UserId
-                    , CheckInProof (..)
+                    , CheckInProof
+                    , mkCheckInProof
+                    , unCheckInProof
                     , Name (..)
                     , Password (..)
                     , PassHash (..)
@@ -25,6 +27,7 @@ module DMSS.Storage ( storeCheckIn
                     , dbConnectionString
                     , User (..)
                     , runStorage
+                    , runStoragePool
                     )
   where
 
@@ -53,14 +56,14 @@ storeUser :: Name           -- ^ Username
           -> PassHash       -- ^ Password Hash
           -> BoxKeypairStore   -- ^ Box keypair encrypted
           -> SignKeypairStore   -- ^ Box keypair encrypted
-          -> IO (Key User)
+          -> SqlPersistT (NoLoggingT (ResourceT IO)) (Key User)
 storeUser n h bkp skp = do
-  t <- getCurrentTimeInSeconds
-  runStorage $ insert $ User n h bkp skp t
+  t <- liftIO getCurrentTimeInSeconds
+  insert $ User n h bkp skp t
 
 removeUser :: Name  -- ^ User to delete by name
-           -> IO ()
-removeUser n = runStorage $ do
+           -> SqlPersistT (NoLoggingT (ResourceT IO)) ()
+removeUser n = do
   -- Delete all checkins associated with UserKey
   mUserKey <- getBy $ UniqueName n
   case mUserKey of
@@ -70,18 +73,9 @@ removeUser n = runStorage $ do
   deleteBy $ UniqueName n
 
 -- | Get UserKey ID
-getUserKey :: Silent  -- ^ is silent and no pool?
-           -> Name    -- ^ User's name
-           -> IO (Maybe (Key User))
-getUserKey (Silent True) n = runStorage $ getUserKeyDBActions n
-getUserKey (Silent False) n = runStoragePool $ getUserKeyDBActions n
-
--- | Get User
---getUser :: Silent  -- ^ is silent and no pool?
---        -> Name    -- ^ User's name
---        -> IO (Maybe User)
---getUser (Silent True) n = runStorage $ getUserDBActions n
---getUser (Silent False) n = runStoragePool $ getUserDBActions n
+getUserKey :: Name    -- ^ User's name
+           -> SqlPersistT (NoLoggingT (ResourceT IO)) (Maybe (Key User))
+getUserKey = getUserKeyDBActions
 
 -- | List the last `Int` users sorted by date
 listUsers :: Int -> IO [User]
@@ -105,15 +99,14 @@ getUserKeyDBActions n = do
 -- | Store a CheckIn
 storeCheckIn :: Name          -- ^ Name of users
              -> CheckInProof  -- ^ Raw checkin verification proof
-             -> IO (Either String (Key CheckIn))
+             -> SqlPersistT (NoLoggingT (ResourceT IO)) (Either String (Key CheckIn))
 storeCheckIn n (CheckInProof rawCheckInData) = do
-  t <- getCurrentTimeInSeconds
-  runStorage $ do
-    m <- getUserKeyDBActions n
-    maybe (pure $ Left "Could not find users fingerprint in DB")
-      (\i -> do
-        res <- insert $ CheckIn i rawCheckInData t
-        pure $ Right res) m
+  t <- liftIO $ getCurrentTimeInSeconds
+  m <- getUserKeyDBActions n
+  maybe (pure $ Left "Could not find users name in DB")
+    (\i -> do
+      res <- insert $ CheckIn i rawCheckInData t
+      pure $ Right res) m
 
 -- | List the last `Int` checkins sorted by date 
 listCheckIns :: Name -> Int -> IO [Entity CheckIn]
