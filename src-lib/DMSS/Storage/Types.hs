@@ -11,31 +11,37 @@
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module DMSS.Storage.Types where
 
 import qualified Crypto.Lithium.Password as LP
 import Crypto.Lithium.Types ( fromPlaintext, toPlaintext, BytesN )
+--import Crypto.Lithium.Password ( storePassword, sensitivePolicy )
 import Data.ByteString ( ByteString )
+--import Data.String (fromString)
 import Data.String.Conv ( toS )
-import Data.Text ( Text, append )
+import Data.Text ( Text )
 import Database.Persist ( PersistField, fromPersistValue, toPersistValue )
 import Database.Persist.Sql ( PersistFieldSql, sqlType )
 import Database.Persist.Types ( PersistValue (PersistList), SqlType (SqlString) )
 import qualified Data.ByteString.Base64 as B64
+--import System.IO.Unsafe ( unsafePerformIO )
 
 -- For testing
-import           Test.QuickCheck  ( Arbitrary (..)
-                                  , arbitrary
---                                  , Gen
---                                  , listOf
---                                  , elements
-                                  )
+import Test.QuickCheck
+   ( Arbitrary (..)
+   , arbitrary
+--   , Gen
+--   , listOf
+--   , elements
+   )
 
 
 newtype Name = Name { unName :: String } deriving (Show, PersistField, PersistFieldSql)
 
 
+-- | Represents password hash and salt to decrypt keypairs
 data PassHash = PassHash { unPassHash :: LP.PasswordString
                          , unSalt :: LP.Salt } deriving Show
 
@@ -69,16 +75,43 @@ instance PersistField PassHash where
   --  (Right . PassHash . PasswordString)
   --  $ toPlaintext bs
   --fromPersistValue perVal= deserializePassHashErrorMsg . toS . show $ perVal
-
-deserializePassHashErrorMsg :: Text -> Either Text a
-deserializePassHashErrorMsg = Left . append (toS
-  "Reading password hash from database failed because we cannot parse this data: ")
-
 instance PersistFieldSql PassHash where
   sqlType _ = SqlString
 
 
+{- | Hash a password into a PassHash
+   This type is our internal representation of a hashed password, so we may
+   store it easily.
+-}
+--hashPassword :: String -> PassHash
+--hashPassword = undefined
+--toPassHash . unsafePerformIO . storePassword sensitivePolicy
+--  . fromString
+
+
+{- | Convert a PasswordString to a PassHash
+
+   PasswordString is the internal representation of a hashed password for the
+   lithium library. This function converts one to our data structure.
+-}
+--toPassHash :: PasswordString -> PassHash
+--toPassHash = undefined --PassHash . fromPlaintext . unSized . unPasswordString
+
+
+{- | Convert a PassHash to a PasswordString
+
+   PasswordString is the internal representation of a hashed password for the
+   lithium library. This function converts our PassHash type to it.
+-}
+--fromPassHash :: PassHash -> Either Text PasswordString
+--fromPassHash (PassHash bs) = undefined
+--maybe
+--  (Left . append "Reading password hash from database failed because we cannot parse this data: " . toS $ bs)
+--  (Right . PasswordString)
+--  $ toPlaintext bs
+
 newtype Password = Password String deriving Show
+
 
 data BoxKeypairStore = BoxKeypairStore { boxSecretKeyStore :: ByteString
                                        , boxPublicKeyStore :: ByteString
@@ -95,6 +128,7 @@ instance PersistField BoxKeypairStore where
                              ++ show r
 instance PersistFieldSql BoxKeypairStore where
   sqlType _ = SqlString
+
 
 data SignKeypairStore = SignKeypairStore { signSecretKeyStore :: ByteString
                                          , signPublicKeyStore :: ByteString
@@ -124,6 +158,13 @@ newtype Silent = Silent { unSilent :: Bool }
 -- For testing
 
 -- KeypairStores should be base64 encoded to prevent characters with special functions
+--instance Arbitrary PassHash where
+--  arbitrary = do
+--    pass <- arbitrary
+--    salt <- arbitrary
+--    return $ PassHash $ ((B64.encode . toS) (pass::String))
+--                        ((B64.encode . toS) (salt::String))
+
 instance Arbitrary BoxKeypairStore where
   arbitrary = do
     s <- arbitrary

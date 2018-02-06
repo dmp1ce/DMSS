@@ -1,28 +1,39 @@
 module StorageTest (tests) where
 
-import           Test.Tasty
-import           Test.Tasty.HUnit
-import qualified Test.Tasty.QuickCheck   as QC
-
-import DMSS.Storage.Types
-import DMSS.Storage.TH
-import DMSS.Storage ( storeCheckIn
-                    , storeUser
-                    , getUserKey
-                    , removeUser
-                    , listCheckIns
-                    , runStorage
-                    )
-
-import           Common
-
 import Data.ByteString.Char8 (pack)
-import           Data.List
+import Data.List ( sort )
+import qualified Database.Persist.Sqlite as P
+import DMSS.Storage
+  ( storeCheckIn
+  , storeUser
+  , getUserKey
+  , removeUser
+  , listCheckIns
+  )
+import DMSS.Storage.TH
+import DMSS.Storage ( runStorage )
+import DMSS.Storage.Types
+  ( BoxKeypairStore (..)
+  , mkCheckInProof
+  , Name (..)
+  , PassHash (..)
+  , SignKeypairStore (..)
+  --, fromPassHash, hashPassword, toPassHash
+  )
+import Test.Tasty ( TestTree )
+import Test.Tasty.HUnit ( Assertion, assertFailure, testCase )
+--, (@?=), testCase )
+import qualified Test.Tasty.QuickCheck as QC
+
+import Common ( withTemporaryTestDirectory )
+
+--import Data.ByteString.Char8 (pack)
+--import           Data.List
 
 import Crypto.Lithium.Types ( toPlaintext )
 import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
 import Crypto.Lithium.Password ( Salt (Salt) )
-import qualified Database.Persist.Sqlite as P
+--import qualified Database.Persist.Sqlite as P
 import Data.Maybe ( fromJust )
 import Control.Monad.IO.Class (liftIO)
 
@@ -31,6 +42,9 @@ tests =
   [ testCase "store_user_key_test" storeUserTest
   , testCase "store_check_in_test" storeCheckInTest
   , testCase "remove_user_key_test" removeUserKeyTest
+  --, toFromPassHash
+  --, QC.testProperty "prop_userStorage_HashPass"
+  --    prop_userStorage_HashPass
   , QC.testProperty "prop_userStorage_BoxKeypairStore"
       prop_userStorage_BoxKeypairStore
   , QC.testProperty "prop_userStorage_SignKeypairStore"
@@ -107,7 +121,25 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
       else liftIO $ assertFailure "CheckIns were not in decending order"
   )
 
+
+--toFromPassHash :: TestTree
+--toFromPassHash = testGroup "Round-trip between PasswordString and PassHash"
+--  [ tc ("A short, awful password",  "foobar")
+--  , tc ("A decent password",        "c%fxBQRe]2L]|#q'")
+--  , tc ("A passphrase",             "obese page rivet gurgle ring twin usia befit olsen")
+--  ]
+--
+--  where
+--    tc (desc, password) =
+--      testCase desc $ (toPassHash <$> fromPassHash ph) @?= (Right ph)
+--      where ph = hashPassword password
+
+
 -- Ensure data that goes into Persistence comes out the same
+--prop_userStorage_HashPass :: HashPass -> Bool
+--prop_userStorage_HashPass bkp =
+--  (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp
+
 prop_userStorage_BoxKeypairStore :: BoxKeypairStore -> Bool
 prop_userStorage_BoxKeypairStore bkp =
   (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp

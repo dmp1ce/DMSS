@@ -12,16 +12,18 @@
 module DMSS.CLI where
 
 import           DMSS.CLI.Command
-import qualified DMSS.Daemon.Command as DCLI
 import           DMSS.CLI.Internal
 import           DMSS.Storage ( Name (..))
 
 import Data.String ( fromString )
+import qualified DMSS.Daemon.Command as DCLI
+import           Paths_DMSS ( version )
 
+import           Data.Monoid ((<>))
+import           Data.Version ( showVersion )
+import           Options.Applicative
 import           System.Daemon (runClient)
 import           System.Environment (setEnv)
-import           Options.Applicative
-import           Data.Monoid ((<>))
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , softline
                                                    , (<$>)
@@ -123,7 +125,7 @@ process (Cli Nothing Status) = do
   res <- runCommand DCLI.Status
   print (res :: Maybe String)
 process (Cli Nothing Version) = do
-  putStrLn $ "CLI version: " ++ cliVersion
+  putStrLn $ "CLI version: " ++ (showVersion version)
   res <- runCommand DCLI.Version
   print (res :: Maybe String)
 
@@ -139,10 +141,7 @@ cliMain = execParser opts >>= process
                       P.text "CLI for managing the DMSS."
                       P.<$> P.softline
                       P.<$> P.text "Use the '--help' flag to find more information about sub commands."
-                      P.<$> P.text "For example 'dmss-cli id --help' or 'dmss-cli id create -h'."
+                      P.<$> P.text "For example 'dmss id --help' or 'dmss id create -h'."
                       )
                     )
      <> header "DMSS Command Line Interface" )
-
-cliVersion :: String
-cliVersion = "0.1.0"

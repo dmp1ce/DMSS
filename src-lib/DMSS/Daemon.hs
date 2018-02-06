@@ -10,23 +10,27 @@
 --
 
 {-# LANGUAGE OverloadedStrings #-}
+
 module DMSS.Daemon where
 
-import DMSS.Daemon.Command
 import DMSS.Config
+import DMSS.Daemon.Command
+import Paths_DMSS ( version )
 
-import Data.Default (def, Default)
-import System.Daemon
-import Control.Pipe.C3 ( commandReceiver )
 import Control.Concurrent ( forkIO, threadDelay )
 import Control.Monad (forever)
+import Control.Pipe.C3 ( commandReceiver )
+import Data.Default (def, Default)
+import Data.Version ( showVersion )
+import System.Daemon
 import System.IO.Silently (silence)
+
 
 type Response = String
 
 checkerDaemon :: Command -> IO Response
 checkerDaemon Status  = return "Daemon is running!"
-checkerDaemon Version = return $ "Daemon version: " ++ daemonVersion
+checkerDaemon Version = return $ "Daemon version: " ++ (showVersion version)
 
 data Options = Options
   { daemonSilent :: Bool }
@@ -61,6 +65,3 @@ logMsgLn :: Options -> String -> IO ()
 logMsgLn o s = silenceIf o $ putStrLn s
 silenceIf :: Options -> IO a -> IO a
 silenceIf o p = if daemonSilent o then silence p else p
-
-daemonVersion :: String
-daemonVersion = "0.1.0"

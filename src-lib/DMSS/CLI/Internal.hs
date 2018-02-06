@@ -25,6 +25,7 @@ import DMSS.Storage ( storeUser
                     , runStorage
                     , storeCheckIn
                     )
+--import DMSS.Storage.Types ( toPassHash )
 import DMSS.Crypto
 import DMSS.Storage.TH ( Unique (..) )
 import Database.Esqueleto ( Entity(..)
