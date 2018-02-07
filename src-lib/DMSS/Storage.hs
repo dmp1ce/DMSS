@@ -21,11 +21,13 @@ module DMSS.Storage ( storeCheckIn
                     , unCheckInProof
                     , Name (..)
                     , Password (..)
-                    , PassHash (..)
+                    , HashSalt, toHashSalt, fromHashSalt
                     , BoxKeypairStore (..)
                     , SignKeypairStore (..)
                     , dbConnectionString
-                    , User (..)
+                    , User ( userHashSalt, userName
+                           , userBoxKeypairStore, userSignKeypairStore
+                           )
                     , runStorage
                     , runStoragePool
                     )
@@ -53,7 +55,7 @@ dbConnectionString = localDirectory >>= \ld -> pure $ ld ++ "/dmss.sqlite"
 
 -- | Store User information
 storeUser :: Name           -- ^ Username
-          -> PassHash       -- ^ Password Hash
+          -> HashSalt       -- ^ Hash and salt for deriving symm key
           -> BoxKeypairStore   -- ^ Box keypair encrypted
           -> SignKeypairStore   -- ^ Box keypair encrypted
           -> SqlPersistT (NoLoggingT (ResourceT IO)) (Key User)

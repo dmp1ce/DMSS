@@ -15,6 +15,7 @@ module DMSS.Crypto where
 
 import DMSS.Storage ( BoxKeypairStore (..)
                     , SignKeypairStore (..)
+                    , HashSalt, toHashSalt
                     )
 
 
@@ -27,14 +28,15 @@ import qualified Crypto.Lithium.Box as B
 import qualified Crypto.Lithium.Sign as S
 import qualified Crypto.Lithium.Unsafe.Sign as SU
 import qualified Crypto.Lithium.SecretBox as SB
+import qualified Crypto.Lithium.Password as P
 import           Crypto.Lithium.Unsafe.Types ( Plaintext (..)
                                              , Secret (..)
                                              -- , BytesN
                                              )
+import           Data.String (fromString)
 import           Data.ByteArray
 import           Data.ByteArray.Sized
 import qualified Data.ByteString.Base64 as B64
---import qualified Crypto.Lithium.Sign  as B
 
 encryptBoxKeypair :: Key -> B.Keypair -> IO BoxKeypairStore
 encryptBoxKeypair symKey (B.Keypair sk pk) = do
@@ -63,3 +65,13 @@ decryptSignKeypair symKey (SignKeypairStore ske pk) =
               Right Nothing    -> Left "Failed to decode public key"
               Left e           -> Left e
    in S.Keypair <$> eSK <*> ePK
+
+{- | Create a HashSalt
+   This type is our internal representation of a hashed password with a salt
+   for deriving a symmetric key.
+-}
+createHashSalt :: String -> IO HashSalt
+createHashSalt p = do
+  s <- P.newSalt
+  sp <- P.storePassword P.sensitivePolicy (fromString p)
+  return $ toHashSalt sp s

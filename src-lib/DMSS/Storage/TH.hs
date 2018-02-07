@@ -27,9 +27,9 @@ import qualified Data.ByteString.Char8  as BS8
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User
   name Name                   -- ^ User's name
-  passwordStore PassHash      -- ^ Password storage hash
-  boxKeypairStore  BoxKeypairStore  -- ^ Keypair stored as seed
-  signKeypairStore  SignKeypairStore  -- ^ Keypair stored as seed
+  hashSalt HashSalt           -- ^ Password hash and salt storage
+  boxKeypairStore  BoxKeypairStore    -- ^ encrypted box keypair
+  signKeypairStore  SignKeypairStore  -- ^ encrypted sign keypair
   UniqueName name
   created Int                 -- ^ POSIX time
   deriving Show

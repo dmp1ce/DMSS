@@ -17,8 +17,10 @@ import DMSS.Storage ( storeUser
                     , listUsers
                     , removeUser
                     , Name (..)
-                    , PassHash (..)
-                    , User (..)
+                    , User ( userHashSalt, userName
+                           , userBoxKeypairStore, userSignKeypairStore
+                           )
+                    , fromHashSalt
                     , mkCheckInProof
                     , BoxKeypairStore (..)
                     , SignKeypairStore (..)
@@ -37,9 +39,8 @@ import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8  as BS8
 import qualified Text.PrettyPrint       as PP
 import Data.String (fromString)
-import Crypto.Lithium.Password  ( storePassword
-                                , sensitivePolicy
-                                , newSalt
+import qualified Data.Text              as T
+import Crypto.Lithium.Password  ( sensitivePolicy
                                 , derive
                                 , Password (..)
                                 , verifyPassword
@@ -54,10 +55,11 @@ processIdCreate :: String         -- ^ Name
                 -> IO String
 processIdCreate n password = runStorage $ do
   -- Create hash so that I know if the password is correct
-  passStore <- liftIO $ storePassword sensitivePolicy (fromString password)
+  hs <- liftIO $ createHashSalt password
 
   -- Derive symmetric key with password.
-  salt <- liftIO $ newSalt
+  salt <- liftIO $ either (die . T.unpack) (return . snd) (fromHashSalt hs)
+
   let symmetricKey = (derive (fromString password) salt sensitivePolicy :: SB.Key)
 
   -- TODO: Seed could be exported as a mnemonic so identity could be restored on another device
@@ -79,7 +81,8 @@ processIdCreate n password = runStorage $ do
   -- Encrypt private keys for storage and store for later
   kpbStore <- liftIO $ encryptBoxKeypair symmetricKey kp_box
   kpsStore <- liftIO $ encryptSignKeypair symmetricKey kp_sign
-  r <- storeUser (Name n) (PassHash passStore salt) kpbStore kpsStore
+
+  r <- storeUser (Name n) hs kpbStore kpsStore
   return (show r)
 
 -- | List the existing users
@@ -123,9 +126,9 @@ processCheckInCreate n p = runStorage $ do
     Nothing -> liftIO $ die $ "User " ++ (unName n) ++ " not found."
     Just (Entity _ u) -> return u
 
-  let passHash = (unPassHash . userPasswordStore) user
-      symmSalt = (unSalt . userPasswordStore) user
-      symmKey = derive p symmSalt sensitivePolicy
+  (passHash, symmSalt) <- liftIO $ either (die . T.unpack) return $
+                                  fromHashSalt $ userHashSalt user
+  let symmKey = derive p symmSalt sensitivePolicy
       signKeyStore = (userSignKeypairStore) user
   sMessage <- if verifyPassword passHash p
   -- Decrypt keypair

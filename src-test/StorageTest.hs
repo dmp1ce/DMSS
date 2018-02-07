@@ -16,24 +16,19 @@ import DMSS.Storage.Types
   ( BoxKeypairStore (..)
   , mkCheckInProof
   , Name (..)
-  , PassHash (..)
+  , HashSalt, fromHashSalt, toHashSalt
   , SignKeypairStore (..)
-  --, fromPassHash, hashPassword, toPassHash
   )
-import Test.Tasty ( TestTree )
-import Test.Tasty.HUnit ( Assertion, assertFailure, testCase )
---, (@?=), testCase )
+import DMSS.Crypto ( createHashSalt )
+import Test.Tasty ( TestTree, testGroup )
+import Test.Tasty.HUnit ( Assertion, assertFailure, testCase, (@?=) )
 import qualified Test.Tasty.QuickCheck as QC
 
 import Common ( withTemporaryTestDirectory )
 
---import Data.ByteString.Char8 (pack)
---import           Data.List
-
 import Crypto.Lithium.Types ( toPlaintext )
 import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
 import Crypto.Lithium.Password ( Salt (Salt) )
---import qualified Database.Persist.Sqlite as P
 import Data.Maybe ( fromJust )
 import Control.Monad.IO.Class (liftIO)
 
@@ -42,9 +37,9 @@ tests =
   [ testCase "store_user_key_test" storeUserTest
   , testCase "store_check_in_test" storeCheckInTest
   , testCase "remove_user_key_test" removeUserKeyTest
-  --, toFromPassHash
-  --, QC.testProperty "prop_userStorage_HashPass"
-  --    prop_userStorage_HashPass
+  , toFromPassHash
+  , QC.testProperty "prop_userStorage_HashSalt"
+      prop_userStorage_HashSalt
   , QC.testProperty "prop_userStorage_BoxKeypairStore"
       prop_userStorage_BoxKeypairStore
   , QC.testProperty "prop_userStorage_SignKeypairStore"
@@ -54,12 +49,10 @@ tests =
 tempDir :: FilePath
 tempDir = "storageTest"
 
-
-dummyPassHash :: PassHash
-dummyPassHash = PassHash
+dummyPassHash :: HashSalt
+dummyPassHash = toHashSalt
   (PasswordString (fromJust . toPlaintext . pack $ "$argon2id$v=19$m=1048576,t=4,p=1$p4S9shWCYwIX1zTKxWrblQ$nJx1a6Yg3jJwvP+d8nBU+dkFYqM3LlnfhMh01OMbD4Q\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL"))
   (Salt . fromJust . toPlaintext $ pack "")
-
 
 dummyBoxKeypairStore :: BoxKeypairStore
 dummyBoxKeypairStore = BoxKeypairStore (pack "Box encryptedPrivateKeyCiphertext") (pack "Box publicKeyText")
@@ -121,24 +114,23 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
       else liftIO $ assertFailure "CheckIns were not in decending order"
   )
 
-
---toFromPassHash :: TestTree
---toFromPassHash = testGroup "Round-trip between PasswordString and PassHash"
---  [ tc ("A short, awful password",  "foobar")
---  , tc ("A decent password",        "c%fxBQRe]2L]|#q'")
---  , tc ("A passphrase",             "obese page rivet gurgle ring twin usia befit olsen")
---  ]
---
---  where
---    tc (desc, password) =
---      testCase desc $ (toPassHash <$> fromPassHash ph) @?= (Right ph)
---      where ph = hashPassword password
-
+toFromPassHash :: TestTree
+toFromPassHash = testGroup "Round-trip between PasswordString and PassHash"
+  [ tc ("A short, awful password",  "foobar")
+  , tc ("A decent password",        "c%fxBQRe]2L]|#q'")
+  , tc ("A passphrase",             "obese page rivet gurgle ring twin usia befit olsen")
+  ]
+  where
+    tc (desc, password) = testCase desc $ do
+        hs <- createHashSalt password
+        (toHashSalt <$> (fst <$> fromHashSalt hs)
+                    <*> (snd <$> fromHashSalt hs))
+                @?= (Right hs)
 
 -- Ensure data that goes into Persistence comes out the same
---prop_userStorage_HashPass :: HashPass -> Bool
---prop_userStorage_HashPass bkp =
---  (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp
+prop_userStorage_HashSalt :: HashSalt -> Bool
+prop_userStorage_HashSalt hs =
+  (Right hs) == (P.fromPersistValue . P.toPersistValue) hs
 
 prop_userStorage_BoxKeypairStore :: BoxKeypairStore -> Bool
 prop_userStorage_BoxKeypairStore bkp =
