@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module StorageTest (tests) where
 
 import Data.ByteString.Char8 (pack)
@@ -16,7 +18,7 @@ import DMSS.Storage.Types
   ( BoxKeypairStore (..)
   , mkCheckInProof
   , Name (..)
-  , HashSalt, fromHashSalt, toHashSalt
+  , HashSalt (HashSalt), fromHashSalt, toHashSalt
   , SignKeypairStore (..)
   )
 import DMSS.Crypto ( createHashSalt )
@@ -25,19 +27,14 @@ import Test.Tasty.HUnit ( Assertion, assertFailure, testCase, (@?=) )
 import qualified Test.Tasty.QuickCheck as QC
 
 import Common ( withTemporaryTestDirectory )
-
-import Crypto.Lithium.Types ( toPlaintext )
-import Crypto.Lithium.Unsafe.Password ( PasswordString (..) )
-import Crypto.Lithium.Password ( Salt (Salt) )
-import Data.Maybe ( fromJust )
 import Control.Monad.IO.Class (liftIO)
 
 tests :: [TestTree]
 tests =
-  [ testCase "store_user_key_test" storeUserTest
-  , testCase "store_check_in_test" storeCheckInTest
+  [ testCase "Store user key test" storeUserTest
+  , testCase "Store checkin test" storeCheckInTest
   , testCase "remove_user_key_test" removeUserKeyTest
-  , toFromPassHash
+  , toFromHashSalt
   , QC.testProperty "prop_userStorage_HashSalt"
       prop_userStorage_HashSalt
   , QC.testProperty "prop_userStorage_BoxKeypairStore"
@@ -49,21 +46,19 @@ tests =
 tempDir :: FilePath
 tempDir = "storageTest"
 
-dummyPassHash :: HashSalt
-dummyPassHash = toHashSalt
-  (PasswordString (fromJust . toPlaintext . pack $ "$argon2id$v=19$m=1048576,t=4,p=1$p4S9shWCYwIX1zTKxWrblQ$nJx1a6Yg3jJwvP+d8nBU+dkFYqM3LlnfhMh01OMbD4Q\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL\NUL"))
-  (Salt . fromJust . toPlaintext $ pack "")
+dummyHashSalt :: HashSalt
+dummyHashSalt = HashSalt "password string store" "salt"
 
 dummyBoxKeypairStore :: BoxKeypairStore
-dummyBoxKeypairStore = BoxKeypairStore (pack "Box encryptedPrivateKeyCiphertext") (pack "Box publicKeyText")
+dummyBoxKeypairStore = BoxKeypairStore "Box encrypted seckey""Box pubkey"
 dummySignKeypairStore :: SignKeypairStore
-dummySignKeypairStore = SignKeypairStore (pack "Sign encryptedPrivateKeyCiphertext") (pack "Sign publicKeyText")
+dummySignKeypairStore = SignKeypairStore "Sign encrypted seckey" "Sign pubkey"
 
 storeUserTest :: Assertion
 storeUserTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
     -- Store fake user key
     let n = Name "joe"
-    _ <- storeUser n dummyPassHash dummyBoxKeypairStore dummySignKeypairStore
+    _ <- storeUser n dummyHashSalt dummyBoxKeypairStore dummySignKeypairStore
 
     -- Check that the fake user key was stored
     k <- getUserKey n
@@ -76,7 +71,7 @@ removeUserKeyTest :: Assertion
 removeUserKeyTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
     -- Store fake user key
     let n = Name "deleteMe1234"
-    _ <- storeUser n dummyPassHash dummyBoxKeypairStore dummySignKeypairStore
+    _ <- storeUser n dummyHashSalt dummyBoxKeypairStore dummySignKeypairStore
 
     -- Remove key
     removeUser n
@@ -92,13 +87,13 @@ storeCheckInTest :: Assertion
 storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
     -- Store a checkin
     let n = Name "joe"
-    _ <- storeUser n dummyPassHash dummyBoxKeypairStore dummySignKeypairStore
+    _ <- storeUser n dummyHashSalt dummyBoxKeypairStore dummySignKeypairStore
     res <- storeCheckIn n (mkCheckInProof $ pack "MyProof")
     case res of
       (Left s) -> liftIO $ assertFailure s
       _ -> return ()
     -- Get a list of checkins
-    l <- liftIO $ listCheckIns n 10
+    l <- listCheckIns n 10
     -- Verify that only one checkin was returned
     case l of
       (_:[])    -> return ()
@@ -107,15 +102,15 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
     -- Create another checkin and verify order is correct
     _ <- storeCheckIn n (mkCheckInProof $ pack "More proof")
     _ <- storeCheckIn n (mkCheckInProof $ pack "Even more proof")
-    l' <- liftIO $ listCheckIns n 10
+    l' <- listCheckIns n 10
     let createdList = map (\x -> checkInCreated $ P.entityVal x) l'
     if createdList == (reverse . sort) createdList
       then return ()
       else liftIO $ assertFailure "CheckIns were not in decending order"
   )
 
-toFromPassHash :: TestTree
-toFromPassHash = testGroup "Round-trip between PasswordString and PassHash"
+toFromHashSalt :: TestTree
+toFromHashSalt = testGroup "Round-trip between PasswordString and HashSalt"
   [ tc ("A short, awful password",  "foobar")
   , tc ("A decent password",        "c%fxBQRe]2L]|#q'")
   , tc ("A passphrase",             "obese page rivet gurgle ring twin usia befit olsen")

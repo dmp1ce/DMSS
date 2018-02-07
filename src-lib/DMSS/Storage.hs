@@ -53,18 +53,20 @@ import           Control.Monad.Trans.Resource ( ResourceT )
 dbConnectionString :: IO String
 dbConnectionString = localDirectory >>= \ld -> pure $ ld ++ "/dmss.sqlite"
 
+type StorageT = SqlPersistT (NoLoggingT (ResourceT IO))
+
 -- | Store User information
 storeUser :: Name           -- ^ Username
           -> HashSalt       -- ^ Hash and salt for deriving symm key
           -> BoxKeypairStore   -- ^ Box keypair encrypted
           -> SignKeypairStore   -- ^ Box keypair encrypted
-          -> SqlPersistT (NoLoggingT (ResourceT IO)) (Key User)
+          -> StorageT (Key User)
 storeUser n h bkp skp = do
   t <- liftIO getCurrentTimeInSeconds
   insert $ User n h bkp skp t
 
 removeUser :: Name  -- ^ User to delete by name
-           -> SqlPersistT (NoLoggingT (ResourceT IO)) ()
+           -> StorageT ()
 removeUser n = do
   -- Delete all checkins associated with UserKey
   mUserKey <- getBy $ UniqueName n
@@ -76,7 +78,7 @@ removeUser n = do
 
 -- | Get UserKey ID
 getUserKey :: Name    -- ^ User's name
-           -> SqlPersistT (NoLoggingT (ResourceT IO)) (Maybe (Key User))
+           -> StorageT (Maybe (Key User))
 getUserKey = getUserKeyDBActions
 
 -- | List the last `Int` users sorted by date
@@ -90,7 +92,7 @@ listUsers i = runStorage $ do
   return (entityVal <$> s)
 
 -- | Underlying Database actions for getting UserKey Key
-getUserKeyDBActions :: Name -> SqlPersistT (NoLoggingT (ResourceT IO)) (Maybe (Key User))
+getUserKeyDBActions :: Name -> StorageT (Maybe (Key User))
 getUserKeyDBActions n = do
   maybeUser <- getBy $ UniqueName n
   maybe
@@ -101,7 +103,7 @@ getUserKeyDBActions n = do
 -- | Store a CheckIn
 storeCheckIn :: Name          -- ^ Name of users
              -> CheckInProof  -- ^ Raw checkin verification proof
-             -> SqlPersistT (NoLoggingT (ResourceT IO)) (Either String (Key CheckIn))
+             -> StorageT (Either String (Key CheckIn))
 storeCheckIn n (CheckInProof rawCheckInData) = do
   t <- liftIO $ getCurrentTimeInSeconds
   m <- getUserKeyDBActions n
@@ -111,8 +113,9 @@ storeCheckIn n (CheckInProof rawCheckInData) = do
       pure $ Right res) m
 
 -- | List the last `Int` checkins sorted by date 
-listCheckIns :: Name -> Int -> IO [Entity CheckIn]
-listCheckIns n i = runStorage $ do
+listCheckIns :: Name -> Int
+             -> StorageT ([Entity CheckIn])
+listCheckIns n i = do
   s <- select $
          from $ \(u, c) -> do
            where_ ( u ^. UserName ==. val n
@@ -124,13 +127,13 @@ listCheckIns n i = runStorage $ do
   return (s :: [Entity CheckIn])
 
 -- | Run storage actions with no logging, no pooling and silent migration
-runStorage :: SqlPersistT (NoLoggingT (ResourceT IO)) a -> IO a
+runStorage :: StorageT a -> IO a
 runStorage action = dbConnectionString >>= \c -> P.runSqlite (pack c) $ do
   _ <- runMigrationSilent migrateAll
   action
 
 -- | Run storage actions with stdout logging, pooling and stdout migration
-runStoragePool :: SqlPersistT (NoLoggingT (ResourceT IO)) a -> IO a
+runStoragePool :: StorageT a -> IO a
 runStoragePool action = dbConnectionString >>= \c -> runStdoutLoggingT $ P.withSqlitePool (pack c) 10 $ \pool -> liftIO $ do
   flip runSqlPersistMPool pool $ do
     stuff <- runMigrationSilent migrateAll

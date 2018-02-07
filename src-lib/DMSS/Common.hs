@@ -26,4 +26,4 @@ getCurrentTimeInSeconds :: IO Int
 getCurrentTimeInSeconds = getCurrentTime >>= \t -> pure $ fromEnum $ utcTimeToPOSIXSeconds t
 
 verifyCheckIn :: Name -> DMSS.Storage.Types.Password -> Entity CheckIn -> IO Bool
-verifyCheckIn (Name _) (DMSS.Storage.Types.Password _) _ = undefined
+verifyCheckIn (Name _) (DMSS.Storage.Types.Password _) _ = return False

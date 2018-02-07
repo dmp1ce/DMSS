@@ -6,8 +6,8 @@ import Test.Tasty.HUnit
 
 import Common
 
-import DMSS.CLI.Internal
-import DMSS.Storage
+import DMSS.CLI.Internal ( processIdCreate, processCheckInCreate )
+import DMSS.Storage ( listCheckIns, runStorage )
 import DMSS.Common
 import DMSS.Storage.Types
 import Data.String (fromString)
@@ -21,9 +21,7 @@ tempDir :: FilePath
 tempDir = "commonTest"
 
 verifyCheckInTest :: Assertion
-verifyCheckInTest = undefined
-  -- Need a new fixture, or a way to generate environment for testing checkins
-  withTemporaryTestDirectory tempDir ( \_ -> do
+verifyCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
     let (name,pass) = ("michael jackson","beat it")
 
     -- Create Id
@@ -33,13 +31,13 @@ verifyCheckInTest = undefined
     _ <- processCheckInCreate (Name name) (fromString pass)
 
     -- Get last checkin
-    l <- listCheckIns (Name name) 1
+    l <- runStorage $ listCheckIns (Name name) 1
     --print l
     let checkIn = head l
 
     -- Verify checkin
     verifyRes <- verifyCheckIn (Name name) (DMSS.Storage.Types.Password pass) checkIn
-    assertBool "CheckIn was not verified" verifyRes
+    assertBool "CheckIn verify failed" verifyRes
 
   --  let fpr = "EF86E97B41918B7E7E939FA7DAD31A050AC8E53E"
   --  -- Create checkin
