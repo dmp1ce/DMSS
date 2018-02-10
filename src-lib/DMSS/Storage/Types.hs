@@ -112,7 +112,7 @@ instance PersistField SignKeypairStore where
 instance PersistFieldSql SignKeypairStore where
   sqlType _ = SqlString
 
-newtype CheckInProof = CheckInProof ByteString
+newtype CheckInProof = CheckInProof ByteString deriving (Show, Eq)
 mkCheckInProof :: ByteString -> CheckInProof
 mkCheckInProof = CheckInProof . B64.encode
 unCheckInProof :: CheckInProof -> ByteString

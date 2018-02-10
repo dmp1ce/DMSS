@@ -10,6 +10,7 @@
 --
 module DMSS.Storage ( storeCheckIn
                     , listCheckIns
+                    , verifyPublicCheckIn
                     , storeUser
                     , listUsers
                     , getUserKey
@@ -34,15 +35,19 @@ module DMSS.Storage ( storeCheckIn
   where
 
 import           DMSS.Config ( localDirectory )
-import           DMSS.Common ( getCurrentTimeInSeconds )
+import           DMSS.Common ( getCurrentTimeInSeconds, toUTCTime )
+import           DMSS.Crypto ( decodeSignPublicKey, toSigned )
 import           DMSS.Storage.Types
 import           DMSS.Storage.TH
+
+import qualified Crypto.Lithium.Sign as S
 
 import qualified Database.Persist.Sqlite as P
 import           Database.Esqueleto
 import           Data.Text ( pack
                            , unpack
                            )
+import           Data.Time.Clock ( UTCTime )
 
 import           Control.Monad.IO.Class ( liftIO )
 import           Control.Monad.Logger ( NoLoggingT
@@ -79,7 +84,12 @@ removeUser n = do
 -- | Get UserKey ID
 getUserKey :: Name    -- ^ User's name
            -> StorageT (Maybe (Key User))
-getUserKey = getUserKeyDBActions
+getUserKey n = do
+  maybeUser <- getBy $ UniqueName n
+  maybe
+    (pure Nothing)
+    (\(Entity userId _) -> pure $ Just userId)
+    maybeUser
 
 -- | List the last `Int` users sorted by date
 listUsers :: Int -> IO [User]
@@ -91,22 +101,13 @@ listUsers i = runStorage $ do
            return c
   return (entityVal <$> s)
 
--- | Underlying Database actions for getting UserKey Key
-getUserKeyDBActions :: Name -> StorageT (Maybe (Key User))
-getUserKeyDBActions n = do
-  maybeUser <- getBy $ UniqueName n
-  maybe
-    (pure Nothing)
-    (\(Entity userId _) -> pure $ Just userId)
-    maybeUser
-
 -- | Store a CheckIn
-storeCheckIn :: Name          -- ^ Name of users
+storeCheckIn :: Name          -- ^ Name of user
              -> CheckInProof  -- ^ Raw checkin verification proof
              -> StorageT (Either String (Key CheckIn))
 storeCheckIn n (CheckInProof rawCheckInData) = do
   t <- liftIO $ getCurrentTimeInSeconds
-  m <- getUserKeyDBActions n
+  m <- getUserKey n
   maybe (pure $ Left "Could not find users name in DB")
     (\i -> do
       res <- insert $ CheckIn i rawCheckInData t
@@ -114,7 +115,7 @@ storeCheckIn n (CheckInProof rawCheckInData) = do
 
 -- | List the last `Int` checkins sorted by date 
 listCheckIns :: Name -> Int
-             -> StorageT ([Entity CheckIn])
+             -> StorageT ([(CheckInProof, UTCTime)])
 listCheckIns n i = do
   s <- select $
          from $ \(u, c) -> do
@@ -124,7 +125,29 @@ listCheckIns n i = do
            limit (toEnum i)
            orderBy [desc (c ^. CheckInCreated)]
            return c
-  return (s :: [Entity CheckIn])
+  return $ ((,) <$> CheckInProof . checkInRaw_data
+                <*> toUTCTime . checkInCreated
+           ) . entityVal <$> s
+
+verifyPublicCheckIn :: Name           -- ^ Users Name
+                    -> CheckInProof   -- ^ Public CheckIn
+                    -> StorageT Bool  -- ^ True if the checkin can be verified
+verifyPublicCheckIn n c = do
+  -- Get public key for user
+  maybeUser <- getBy $ UniqueName n
+  let mPK = case ( decodeSignPublicKey . userSignKeypairStore . entityVal )
+                   <$> maybeUser of
+              Just (Right a) -> Just a
+              _              -> Nothing
+
+  -- Verify signature
+      mM = S.openSigned <$> mPK <*> (Just (toSigned c))
+
+  case mM of
+    Just mM' -> case mM' of
+      Just _ -> return True -- if m /= (pack "") then return True else return False
+      Nothing -> return False
+    Nothing -> return False
 
 -- | Run storage actions with no logging, no pooling and silent migration
 runStorage :: StorageT a -> IO a

@@ -12,7 +12,6 @@
 
 module DMSS.CLI.Internal where
 
---import DMSS.Config
 import DMSS.Storage ( storeUser
                     , listUsers
                     , removeUser
@@ -21,14 +20,17 @@ import DMSS.Storage ( storeUser
                            , userBoxKeypairStore, userSignKeypairStore
                            )
                     , fromHashSalt
-                    , mkCheckInProof
                     , BoxKeypairStore (..)
                     , SignKeypairStore (..)
                     , runStorage
                     , storeCheckIn
                     )
---import DMSS.Storage.Types ( toPassHash )
-import DMSS.Crypto
+import DMSS.Crypto ( fromSigned
+                   , encryptBoxKeypair
+                   , decryptSignKeypair, encryptSignKeypair
+                   , createHashSalt
+                   )
+import DMSS.Common ( isoFormatCurrentUTCTime )
 import DMSS.Storage.TH ( Unique (..) )
 import Database.Esqueleto ( Entity(..)
                           , getBy )
@@ -134,19 +136,13 @@ processCheckInCreate n p = runStorage $ do
   -- Decrypt keypair
   then case (decryptSignKeypair symmKey signKeyStore) of
     Right (S.Keypair secr _) -> liftIO $ do
-      putStrLn "Unlocked Sign keypair"
-      print secr
-      putStrLn "Signing and printing test message"
       -- Sign message
-      return $ S.sign' secr (toS "Test message here!fefeijfeifjeifejfiejfiefeifjejifeifejifiejeijfj" :: BS8.ByteString)
-
-      --print $ S.unSigned signedMessage
-      --putStrLn "Verifying signature"
-      --print $ S.openSigned pub signedMessage
+      currTime <- isoFormatCurrentUTCTime
+      return $ S.sign' secr (toS currTime :: BS8.ByteString)
     Left e  -> liftIO $ die e
   else liftIO $ die $ "Incorrect password for " ++ (unName n) ++ "."
 
-  _ <- storeCheckIn n (mkCheckInProof $ S.unSigned sMessage)
+  _ <- storeCheckIn n (fromSigned sMessage)
   return ()
 
   -- Decrypt Sign keypair with symmetric

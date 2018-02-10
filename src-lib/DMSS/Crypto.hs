@@ -13,10 +13,11 @@
 {-# LANGUAGE DataKinds #-}
 module DMSS.Crypto where
 
-import DMSS.Storage ( BoxKeypairStore (..)
-                    , SignKeypairStore (..)
-                    , HashSalt, toHashSalt
-                    )
+import DMSS.Storage.Types ( BoxKeypairStore (..)
+                          , SignKeypairStore (..)
+                          , HashSalt, toHashSalt
+                          , CheckInProof, unCheckInProof, mkCheckInProof
+                          )
 
 
 import           Crypto.Lithium.SecretBox ( Key
@@ -36,6 +37,7 @@ import           Crypto.Lithium.Unsafe.Types ( Plaintext (..)
 import           Data.String (fromString)
 import           Data.ByteArray
 import           Data.ByteArray.Sized
+import qualified Data.ByteString.Char8  as BS
 import qualified Data.ByteString.Base64 as B64
 
 encryptBoxKeypair :: Key -> B.Keypair -> IO BoxKeypairStore
@@ -60,11 +62,21 @@ decryptSignKeypair symKey (SignKeypairStore ske pk) =
               Just sk -> Right $ S.SecretKey $ Conceal sk
               Nothing -> Left "Failed to decrypt secret key"
           Left e     -> Left e
-      ePK = case toPlaintext <$> B64.decode pk of
-              Right (Just pk') -> Right $ S.PublicKey pk'
-              Right Nothing    -> Left "Failed to decode public key"
-              Left e           -> Left e
-   in S.Keypair <$> eSK <*> ePK
+      ePK = decodeSignPublicKey (SignKeypairStore ske pk)
+  in S.Keypair <$> eSK <*> ePK
+
+decodeSignPublicKey :: SignKeypairStore -> Either String S.PublicKey
+decodeSignPublicKey (SignKeypairStore _ p) =
+  case toPlaintext <$> B64.decode p of
+    Right (Just p') -> Right $ S.PublicKey p'
+    Right Nothing    -> Left "Failed to decode public key"
+    Left e           -> Left e
+
+fromSigned :: S.Signed BS.ByteString -> CheckInProof
+fromSigned = mkCheckInProof . S.unSigned
+
+toSigned :: CheckInProof -> S.Signed BS.ByteString
+toSigned = S.Signed . unCheckInProof
 
 {- | Create a HashSalt
    This type is our internal representation of a hashed password with a salt

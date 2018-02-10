@@ -3,7 +3,6 @@
 module StorageTest (tests) where
 
 import Data.ByteString.Char8 (pack)
-import Data.List ( sort )
 import qualified Database.Persist.Sqlite as P
 import DMSS.Storage
   ( storeCheckIn
@@ -12,7 +11,6 @@ import DMSS.Storage
   , removeUser
   , listCheckIns
   )
-import DMSS.Storage.TH
 import DMSS.Storage ( runStorage )
 import DMSS.Storage.Types
   ( BoxKeypairStore (..)
@@ -101,10 +99,10 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
 
     -- Create another checkin and verify order is correct
     _ <- storeCheckIn n (mkCheckInProof $ pack "More proof")
-    _ <- storeCheckIn n (mkCheckInProof $ pack "Even more proof")
+    let lastProof = mkCheckInProof $ pack "Even more proof"
+    _ <- storeCheckIn n lastProof
     l' <- listCheckIns n 10
-    let createdList = map (\x -> checkInCreated $ P.entityVal x) l'
-    if createdList == (reverse . sort) createdList
+    if (fst (head l') == lastProof)
       then return ()
       else liftIO $ assertFailure "CheckIns were not in decending order"
   )

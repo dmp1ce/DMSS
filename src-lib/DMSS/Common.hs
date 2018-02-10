@@ -10,20 +10,24 @@
 --
 
 module DMSS.Common ( getCurrentTimeInSeconds
-                   , verifyCheckIn
+                   , toUTCTime, isoFormatCurrentUTCTime
                    ) where
 
-import DMSS.Storage.TH
-import DMSS.Storage.Types
---import DMSS.Config
-
-import Database.Persist.Sqlite
 import Data.Time.Clock
-import Data.Time.Clock.POSIX
---import qualified Data.ByteString.Char8   as C
+import Data.Time.Clock.POSIX ( getCurrentTime
+                             , posixSecondsToUTCTime
+                             , utcTimeToPOSIXSeconds
+                             )
+import Data.Time.Format ( formatTime, defaultTimeLocale
+                        , rfc822DateFormat
+                        )
 
 getCurrentTimeInSeconds :: IO Int
-getCurrentTimeInSeconds = getCurrentTime >>= \t -> pure $ fromEnum $ utcTimeToPOSIXSeconds t
+getCurrentTimeInSeconds = (fromEnum . utcTimeToPOSIXSeconds) <$> getCurrentTime
 
-verifyCheckIn :: Name -> DMSS.Storage.Types.Password -> Entity CheckIn -> IO Bool
-verifyCheckIn (Name _) (DMSS.Storage.Types.Password _) _ = return False
+toUTCTime :: Int -> UTCTime
+toUTCTime = posixSecondsToUTCTime . toEnum
+
+isoFormatCurrentUTCTime :: IO String
+isoFormatCurrentUTCTime =
+  (formatTime defaultTimeLocale rfc822DateFormat) <$> getCurrentTime
