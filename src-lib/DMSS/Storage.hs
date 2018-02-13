@@ -178,6 +178,5 @@ runStorage action = dbConnectionString >>= \c -> P.runSqlite (pack c) $ do
 runStoragePool :: StorageT a -> IO a
 runStoragePool action = dbConnectionString >>= \c -> runStdoutLoggingT $ P.withSqlitePool (pack c) 10 $ \pool -> liftIO $ do
   flip runSqlPersistMPool pool $ do
-    stuff <- runMigrationSilent migrateAll
-    liftIO $ mapM_ (putStrLn . unpack) stuff
+    runMigrationSilent migrateAll >>= liftIO . (mapM_ (putStrLn . unpack))
     action

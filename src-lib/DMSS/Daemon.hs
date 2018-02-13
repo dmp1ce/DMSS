@@ -22,7 +22,7 @@ import DMSS.Storage ( StorageT, runStoragePool
 import Paths_DMSS ( version )
 
 import Control.Concurrent ( forkIO, threadDelay )
-import Control.Monad (forever)
+import Control.Monad (forever, foldM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Pipe.C3 ( commandReceiver )
 import Data.Default (def, Default)
@@ -52,10 +52,13 @@ mainLoop o = do
   -- Check checkin status of all users
   userCheckIns <- latestCheckIns
   -- Valid checkin if any valid checkin with latestCheckIns timeframe
-  checkInsValid <- traverse (\(n,p) -> (,)
-                                   <$> (pure n)
-                                   <*> or <$> traverse (verifyPublicCheckIn n) p
-                            ) userCheckIns
+  checkInsValid <- traverse (\(n,ps) ->
+    (,) <$> (pure n)
+        <*> foldM (\a p ->
+            if a
+            then pure a
+            else verifyPublicCheckIn n p) False ps
+    ) userCheckIns
 
   liftIO $ traverse_
             (\(n,v) ->
