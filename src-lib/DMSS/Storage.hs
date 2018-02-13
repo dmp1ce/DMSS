@@ -10,6 +10,7 @@
 --
 module DMSS.Storage ( storeCheckIn
                     , listCheckIns
+                    , latestCheckIns
                     , verifyPublicCheckIn
                     , storeUser
                     , listUsers
@@ -31,6 +32,7 @@ module DMSS.Storage ( storeCheckIn
                            )
                     , runStorage
                     , runStoragePool
+                    , StorageT
                     )
   where
 
@@ -92,8 +94,9 @@ getUserKey n = do
     maybeUser
 
 -- | List the last `Int` users sorted by date
-listUsers :: Int -> IO [User]
-listUsers i = runStorage $ do
+listUsers :: Int
+          -> StorageT [User]
+listUsers i = do
   s <- select $
          from $ \c -> do
            limit (toEnum i)
@@ -128,6 +131,22 @@ listCheckIns n i = do
   return $ ((,) <$> CheckInProof . checkInRaw_data
                 <*> toUTCTime . checkInCreated
            ) . entityVal <$> s
+
+-- | Get latest checkins for all users
+-- Returns checkins which have the possibility of being valid for
+-- the users checkin time period preferences
+latestCheckIns :: StorageT [(Name, [CheckInProof])]
+latestCheckIns = do
+  -- Get all users
+  s <- select $ from $ \u -> do return u
+
+  -- Get CheckInProof for reach user
+  traverse (\u -> do
+        let n = userName $ entityVal u
+        -- TODO: Should actually get checkins based on time
+        cs <- listCheckIns (userName $ entityVal u) 10
+        return (n, (fst <$> cs))
+    ) s
 
 verifyPublicCheckIn :: Name           -- ^ Users Name
                     -> CheckInProof   -- ^ Public CheckIn

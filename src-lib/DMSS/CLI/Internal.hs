@@ -90,7 +90,7 @@ processIdCreate n password = runStorage $ do
 -- | List the existing users
 processIdList :: IO String
 processIdList = do
-  users <- listUsers 30
+  users <- runStorage $ listUsers 30
   return $ PP.render (draw users)
   where
     draw :: [User] -> PP.Doc

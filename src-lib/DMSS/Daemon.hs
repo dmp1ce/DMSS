@@ -15,13 +15,19 @@ module DMSS.Daemon where
 
 import DMSS.Config
 import DMSS.Daemon.Command
+import DMSS.Storage ( StorageT, runStoragePool
+                    , latestCheckIns, verifyPublicCheckIn
+                    , unName
+                    )
 import Paths_DMSS ( version )
 
 import Control.Concurrent ( forkIO, threadDelay )
 import Control.Monad (forever)
+import Control.Monad.IO.Class (liftIO)
 import Control.Pipe.C3 ( commandReceiver )
 import Data.Default (def, Default)
 import Data.Version ( showVersion )
+import Data.Foldable ( traverse_ )
 import System.Daemon
 import System.IO.Silently (silence)
 
@@ -41,21 +47,38 @@ instance Default Options where
 defaultOptions :: Options
 defaultOptions = (def :: Options)
 
+mainLoop :: Options -> StorageT ()
+mainLoop o = do
+  -- Check checkin status of all users
+  userCheckIns <- latestCheckIns
+  -- Valid checkin if any valid checkin with latestCheckIns timeframe
+  checkInsValid <- traverse (\(n,p) -> (,)
+                                   <$> (pure n)
+                                   <*> or <$> traverse (verifyPublicCheckIn n) p
+                            ) userCheckIns
+
+  liftIO $ traverse_
+            (\(n,v) ->
+              if v
+              then logMsgLn o $ (unName n) ++ " has a valid checkin."
+              else logMsgLn o $ (unName n) ++ " has not checked in recently!"
+            ) checkInsValid
+
 daemonMain :: Options -> IO ()
 daemonMain o = do
+  -- Make sure local directory exists for storing data
+  createLocalDirectory
+
   -- Start event loop
   logMsg o "Starting event loop..."
+  -- Start daemon process
   _ <- forkIO $ forever $ do
     let ms = 10000
         num_ms = 1000
     threadDelay (ms * num_ms)
-    logMsgLn o $ "heartbeat"
+    runStoragePool $ mainLoop o
   logMsgLn o "Done"
 
-  -- Make sure local directory exists for storing data
-  createLocalDirectory
-
-  -- Start daemon process
   runInForeground 5000 (commandReceiver checkerDaemon)
 
 -- Log messages functions. Simply outputs to stdout for now.
