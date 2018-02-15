@@ -31,7 +31,7 @@ import DMSS.Crypto ( fromSigned
                    , createHashSalt
                    )
 import DMSS.Common ( isoFormatCurrentUTCTime )
-import DMSS.Storage.TH ( Unique (..) )
+import DMSS.Storage.TH ( Unique (..), Key )
 import Database.Esqueleto ( Entity(..)
                           , getBy )
 
@@ -54,13 +54,13 @@ import qualified Crypto.Lithium.Sign      as S
 -- | Create a user ID
 processIdCreate :: String         -- ^ Name
                 -> String         -- ^ Password
-                -> IO String
-processIdCreate n password = runStorage $ do
+                -> IO (Key User)
+processIdCreate n password = do
   -- Create hash so that I know if the password is correct
-  hs <- liftIO $ createHashSalt password
+  hs <- createHashSalt password
 
   -- Derive symmetric key with password.
-  salt <- liftIO $ either (die . T.unpack) (return . snd) (fromHashSalt hs)
+  salt <- either (die . T.unpack) (return . snd) (fromHashSalt hs)
 
   let symmetricKey = (derive (fromString password) salt sensitivePolicy :: SB.Key)
 
@@ -69,8 +69,8 @@ processIdCreate n password = runStorage $ do
   -- seed <- newSeed
 
   -- Create keypair for encrypting and signing
-  kp_box  <- liftIO $ B.newKeypair
-  kp_sign <- liftIO $ S.newKeypair
+  kp_box  <- B.newKeypair
+  kp_sign <- S.newKeypair
   --let secretBA = B.secretKey kp_box
   --let secretBA' = (UB.fromSecretKey secretBA) :: ByteString
   --kp_sign <- S.newKeypair
@@ -81,11 +81,10 @@ processIdCreate n password = runStorage $ do
   --print passStore
 
   -- Encrypt private keys for storage and store for later
-  kpbStore <- liftIO $ encryptBoxKeypair symmetricKey kp_box
-  kpsStore <- liftIO $ encryptSignKeypair symmetricKey kp_sign
+  kpbStore <- encryptBoxKeypair symmetricKey kp_box
+  kpsStore <- encryptSignKeypair symmetricKey kp_sign
 
-  r <- storeUser (Name n) hs kpbStore kpsStore
-  return (show r)
+  runStorage $ storeUser (Name n) hs kpbStore kpsStore
 
 -- | List the existing users
 processIdList :: IO String

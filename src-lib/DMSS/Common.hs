@@ -10,6 +10,7 @@
 --
 
 module DMSS.Common ( getCurrentTimeInSeconds
+                   , toSeconds
                    , toUTCTime, isoFormatCurrentUTCTime
                    ) where
 
@@ -22,11 +23,15 @@ import Data.Time.Format ( formatTime, defaultTimeLocale
                         , rfc822DateFormat
                         )
 
+
 getCurrentTimeInSeconds :: IO Int
-getCurrentTimeInSeconds = (fromEnum . utcTimeToPOSIXSeconds) <$> getCurrentTime
+getCurrentTimeInSeconds = toSeconds <$> getCurrentTime
+
+toSeconds :: UTCTime -> Int
+toSeconds = round . utcTimeToPOSIXSeconds
 
 toUTCTime :: Int -> UTCTime
-toUTCTime = posixSecondsToUTCTime . toEnum
+toUTCTime = posixSecondsToUTCTime . fromInteger . toInteger
 
 isoFormatCurrentUTCTime :: IO String
 isoFormatCurrentUTCTime =

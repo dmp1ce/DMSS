@@ -105,7 +105,8 @@ process (Cli Nothing (Id (IdCreate n Nothing))) = do
           process $ Cli Nothing $ Id $ IdCreate n Nothing
   else process $ Cli Nothing $ Id $ IdCreate n (Just p)
 
-process (Cli Nothing (Id (IdCreate (Just n) (Just p)))) = processIdCreate n p >>= putStrLn
+process (Cli Nothing (Id (IdCreate (Just n) (Just p)))) =
+  processIdCreate n p >> (putStrLn $ n ++ " created")
 process (Cli Nothing (Id IdList)) = processIdList >>= putStrLn
 process (Cli Nothing (Id (IdRemove fpr))) = do
   m <- processIdRemove fpr

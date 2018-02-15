@@ -2,7 +2,6 @@ module CLITest (tests) where
 
 import Test.Tasty
 import Test.Tasty.HUnit
---import Test.Tasty.SmallCheck
 
 import DMSS.CLI.Internal
 

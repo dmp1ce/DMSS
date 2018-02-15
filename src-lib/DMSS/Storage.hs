@@ -37,7 +37,7 @@ module DMSS.Storage ( storeCheckIn
   where
 
 import           DMSS.Config ( localDirectory )
-import           DMSS.Common ( getCurrentTimeInSeconds, toUTCTime )
+import           DMSS.Common ( getCurrentTimeInSeconds, toUTCTime, toSeconds )
 import           DMSS.Crypto ( decodeSignPublicKey, toSigned )
 import           DMSS.Storage.Types
 import           DMSS.Storage.TH
@@ -49,7 +49,8 @@ import           Database.Esqueleto
 import           Data.Text ( pack
                            , unpack
                            )
-import           Data.Time.Clock ( UTCTime )
+import           Data.Time.Clock ( UTCTime, NominalDiffTime
+                                 , addUTCTime, getCurrentTime )
 
 import           Control.Monad.IO.Class ( liftIO )
 import           Control.Monad.Logger ( NoLoggingT
@@ -116,16 +117,20 @@ storeCheckIn n (CheckInProof rawCheckInData) = do
       res <- insert $ CheckIn i rawCheckInData t
       pure $ Right res) m
 
--- | List the last `Int` checkins sorted by date 
-listCheckIns :: Name -> Int
+-- | List all checkins since `NominalDiffTime` from now
+--   `Nothing` for time means return all checkins
+listCheckIns :: Name                  -- ^ Owner of checkins
+             -> Maybe NominalDiffTime -- ^ Timespan before now to list checkins
              -> StorageT ([(CheckInProof, UTCTime)])
-listCheckIns n i = do
+listCheckIns n mT = do
+  ct <- liftIO $ getCurrentTime
+  let cutoff d = toSeconds $ addUTCTime (negate d) ct
   s <- select $
          from $ \(u, c) -> do
            where_ ( u ^. UserName ==. val n
                 &&. u ^. UserId ==. c ^. CheckInUserId
+                &&. c ^. CheckInCreated >=. val (maybe 0 cutoff mT)
                   )
-           limit (toEnum i)
            orderBy [desc (c ^. CheckInCreated)]
            return c
   return $ ((,) <$> CheckInProof . checkInRaw_data
@@ -144,7 +149,7 @@ latestCheckIns = do
   traverse (\u -> do
         let n = userName $ entityVal u
         -- TODO: Should actually get checkins based on time
-        cs <- listCheckIns (userName $ entityVal u) 10
+        cs <- listCheckIns (userName $ entityVal u) Nothing
         return (n, (fst <$> cs))
     ) s
 

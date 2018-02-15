@@ -26,6 +26,7 @@ import qualified Test.Tasty.QuickCheck as QC
 
 import Common ( withTemporaryTestDirectory )
 import Control.Monad.IO.Class (liftIO)
+import Control.Concurrent (threadDelay)
 
 tests :: [TestTree]
 tests =
@@ -91,7 +92,7 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
       (Left s) -> liftIO $ assertFailure s
       _ -> return ()
     -- Get a list of checkins
-    l <- listCheckIns n 10
+    l <- listCheckIns n Nothing
     -- Verify that only one checkin was returned
     case l of
       (_:[])    -> return ()
@@ -99,9 +100,11 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
 
     -- Create another checkin and verify order is correct
     _ <- storeCheckIn n (mkCheckInProof $ pack "More proof")
+    -- Wait a second to ensure last proof is first on the list
+    liftIO $ threadDelay (1000 * 1000 * 1)
     let lastProof = mkCheckInProof $ pack "Even more proof"
     _ <- storeCheckIn n lastProof
-    l' <- listCheckIns n 10
+    l' <- listCheckIns n Nothing
     if (fst (head l') == lastProof)
       then return ()
       else liftIO $ assertFailure "CheckIns were not in decending order"
