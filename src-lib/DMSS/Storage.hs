@@ -145,12 +145,14 @@ latestCheckIns :: StorageT [(Name, [CheckInProof])]
 latestCheckIns = do
   -- Get all users
   s <- select $ from $ \u -> do return u
+  -- TODO: Get checkin preference from user profile
+  -- For now use one day time span
+  let ndt = fromInteger (24*60*60)
 
   -- Get CheckInProof for reach user
   traverse (\u -> do
         let n = userName $ entityVal u
-        -- TODO: Should actually get checkins based on time
-        cs <- listCheckIns (userName $ entityVal u) Nothing
+        cs <- listCheckIns (userName $ entityVal u) (Just ndt)
         return (n, (fst <$> cs))
     ) s
 
@@ -170,7 +172,7 @@ verifyPublicCheckIn n c = do
 
   case mM of
     Just mM' -> case mM' of
-      Just _ -> return True -- if m /= (pack "") then return True else return False
+      Just _ -> return True
       Nothing -> return False
     Nothing -> return False
 
