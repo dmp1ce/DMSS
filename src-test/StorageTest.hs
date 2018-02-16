@@ -18,6 +18,7 @@ import DMSS.Storage.Types
   , Name (..)
   , HashSalt (HashSalt), fromHashSalt, toHashSalt
   , SignKeypairStore (..)
+  , UTCTimeStore
   )
 import DMSS.Crypto ( createHashSalt )
 import Test.Tasty ( TestTree, testGroup )
@@ -40,6 +41,7 @@ tests =
       prop_userStorage_BoxKeypairStore
   , QC.testProperty "prop_userStorage_SignKeypairStore"
       prop_userStorage_SignKeypairStore
+  , QC.testProperty "prop_UTCTimeStore" prop_UTCTimeStore
   ]
 
 tempDir :: FilePath
@@ -135,3 +137,6 @@ prop_userStorage_BoxKeypairStore bkp =
 prop_userStorage_SignKeypairStore :: SignKeypairStore -> Bool
 prop_userStorage_SignKeypairStore bkp =
   (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp
+
+prop_UTCTimeStore :: UTCTimeStore -> Bool
+prop_UTCTimeStore uts = (Right uts) == (P.fromPersistValue . P.toPersistValue) uts

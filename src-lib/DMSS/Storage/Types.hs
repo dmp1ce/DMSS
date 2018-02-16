@@ -20,20 +20,20 @@ import Crypto.Lithium.Types ( fromPlaintext, toPlaintext )
 import Data.ByteString ( ByteString )
 import Data.String.Conv ( toS )
 import Data.Text ( Text, append )
+import Data.Time.Clock ( UTCTime )
 import Database.Persist ( PersistField, fromPersistValue, toPersistValue )
 import Database.Persist.Sql ( PersistFieldSql, sqlType )
-import Database.Persist.Types ( PersistValue (PersistList), SqlType (SqlString) )
+import Database.Persist.Types ( PersistValue (PersistList)
+                              , SqlType (SqlString, SqlInt64)
+                              )
 import qualified Data.ByteString.Base64 as B64
+import DMSS.Common ( toSeconds, toUTCTime )
 
 -- For testing
 import Test.QuickCheck
    ( Arbitrary (..)
    , arbitrary
---   , Gen
---   , listOf
---   , elements
    )
-
 
 newtype Name = Name { unName :: String } deriving (Show, PersistField, PersistFieldSql)
 
@@ -112,6 +112,17 @@ instance PersistField SignKeypairStore where
 instance PersistFieldSql SignKeypairStore where
   sqlType _ = SqlString
 
+-- | `UTCTime` which can be stored with Persistence
+newtype UTCTimeStore = UTCTimeStore { unUTCTimeStore :: UTCTime } deriving (Show, Eq)
+
+instance PersistField UTCTimeStore where
+  toPersistValue (UTCTimeStore ut) = toPersistValue (toSeconds ut)
+  fromPersistValue v = case fromPersistValue v of
+    Right v' -> Right $ UTCTimeStore (toUTCTime v')
+    Left e   -> (Left . toS . show) e
+instance PersistFieldSql UTCTimeStore where
+  sqlType _ = SqlInt64
+
 newtype CheckInProof = CheckInProof ByteString deriving (Show, Eq)
 mkCheckInProof :: ByteString -> CheckInProof
 mkCheckInProof = CheckInProof . B64.encode
@@ -119,7 +130,6 @@ unCheckInProof :: CheckInProof -> ByteString
 unCheckInProof (CheckInProof p) = either (const p) id (B64.decode p)
 
 newtype Silent = Silent { unSilent :: Bool }
-
 
 -- For testing
 
@@ -143,3 +153,8 @@ instance Arbitrary SignKeypairStore where
     p <- arbitrary
     return $ SignKeypairStore ((B64.encode . toS) (s::String))
                               ((B64.encode . toS) (p::String))
+
+instance Arbitrary UTCTimeStore where
+  arbitrary = do
+    i <- arbitrary
+    return $ UTCTimeStore (toUTCTime i)

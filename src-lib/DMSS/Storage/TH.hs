@@ -31,11 +31,11 @@ User
   boxKeypairStore  BoxKeypairStore    -- ^ encrypted box keypair
   signKeypairStore  SignKeypairStore  -- ^ encrypted sign keypair
   UniqueName name
-  created Int                 -- ^ POSIX time
+  created UTCTimeStore        -- ^ Creation time
   deriving Show
 CheckIn
   userId UserId
   raw_data BS8.ByteString
-  created Int                 -- ^ POSIX time
+  created UTCTimeStore        -- ^ Creation time
   deriving Show
 |]

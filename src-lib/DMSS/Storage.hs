@@ -37,7 +37,7 @@ module DMSS.Storage ( storeCheckIn
   where
 
 import           DMSS.Config ( localDirectory )
-import           DMSS.Common ( getCurrentTimeInSeconds, toUTCTime, toSeconds )
+import           DMSS.Common ( toUTCTime )
 import           DMSS.Crypto ( decodeSignPublicKey, toSigned )
 import           DMSS.Storage.Types
 import           DMSS.Storage.TH
@@ -70,8 +70,8 @@ storeUser :: Name           -- ^ Username
           -> SignKeypairStore   -- ^ Box keypair encrypted
           -> StorageT (Key User)
 storeUser n h bkp skp = do
-  t <- liftIO getCurrentTimeInSeconds
-  insert $ User n h bkp skp t
+  t <- liftIO getCurrentTime
+  insert $ User n h bkp skp (UTCTimeStore t)
 
 removeUser :: Name  -- ^ User to delete by name
            -> StorageT ()
@@ -110,11 +110,11 @@ storeCheckIn :: Name          -- ^ Name of user
              -> CheckInProof  -- ^ Raw checkin verification proof
              -> StorageT (Either String (Key CheckIn))
 storeCheckIn n (CheckInProof rawCheckInData) = do
-  t <- liftIO $ getCurrentTimeInSeconds
+  t <- liftIO $ getCurrentTime
   m <- getUserKey n
   maybe (pure $ Left "Could not find users name in DB")
     (\i -> do
-      res <- insert $ CheckIn i rawCheckInData t
+      res <- insert $ CheckIn i rawCheckInData (UTCTimeStore t)
       pure $ Right res) m
 
 -- | List all checkins since `NominalDiffTime` from now
@@ -124,17 +124,18 @@ listCheckIns :: Name                  -- ^ Owner of checkins
              -> StorageT ([(CheckInProof, UTCTime)])
 listCheckIns n mT = do
   ct <- liftIO $ getCurrentTime
-  let cutoff d = toSeconds $ addUTCTime (negate d) ct
+  let cutoff d = UTCTimeStore $ addUTCTime (negate d) ct
+      timeZero = UTCTimeStore (toUTCTime 0)
   s <- select $
          from $ \(u, c) -> do
            where_ ( u ^. UserName ==. val n
                 &&. u ^. UserId ==. c ^. CheckInUserId
-                &&. c ^. CheckInCreated >=. val (maybe 0 cutoff mT)
+                &&. c ^. CheckInCreated >=. val (maybe timeZero cutoff mT)
                   )
            orderBy [desc (c ^. CheckInCreated)]
            return c
   return $ ((,) <$> CheckInProof . checkInRaw_data
-                <*> toUTCTime . checkInCreated
+                <*> unUTCTimeStore . checkInCreated
            ) . entityVal <$> s
 
 -- | Get latest checkins for all users

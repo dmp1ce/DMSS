@@ -42,6 +42,4 @@ verifyPublicCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> do
   )
 
 prop_utcTimeToSeconds :: Int -> Bool
-prop_utcTimeToSeconds s =
-  --let utc = UTCTime (ModifiedJulianDay d) (secondsToDiffTime dt)
-  s == (toSeconds $ toUTCTime s)
+prop_utcTimeToSeconds s = s == (toSeconds $ toUTCTime s)
