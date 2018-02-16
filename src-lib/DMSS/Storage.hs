@@ -80,7 +80,7 @@ removeUser n = do
   mUserKey <- getBy $ UniqueName n
   case mUserKey of
     Nothing  -> error "Couldn't find User"
-    (Just uk) -> P.deleteWhere [ UserId P.==. (entityKey uk) ]
+    (Just uk) -> P.deleteWhere [ UserId P.==. entityKey uk ]
   -- Then delete UserKey
   deleteBy $ UniqueName n
 
@@ -110,7 +110,7 @@ storeCheckIn :: Name          -- ^ Name of user
              -> CheckInProof  -- ^ Raw checkin verification proof
              -> StorageT (Either String (Key CheckIn))
 storeCheckIn n (CheckInProof rawCheckInData) = do
-  t <- liftIO $ getCurrentTime
+  t <- liftIO getCurrentTime
   m <- getUserKey n
   maybe (pure $ Left "Could not find users name in DB")
     (\i -> do
@@ -121,9 +121,9 @@ storeCheckIn n (CheckInProof rawCheckInData) = do
 --   `Nothing` for time means return all checkins
 listCheckIns :: Name                  -- ^ Owner of checkins
              -> Maybe NominalDiffTime -- ^ Timespan before now to list checkins
-             -> StorageT ([(CheckInProof, UTCTime)])
+             -> StorageT [(CheckInProof, UTCTime)]
 listCheckIns n mT = do
-  ct <- liftIO $ getCurrentTime
+  ct <- liftIO getCurrentTime
   let cutoff d = UTCTimeStore $ addUTCTime (negate d) ct
       timeZero = UTCTimeStore (toUTCTime 0)
   s <- select $
@@ -144,7 +144,7 @@ listCheckIns n mT = do
 latestCheckIns :: StorageT [(Name, [CheckInProof])]
 latestCheckIns = do
   -- Get all users
-  s <- select $ from $ \u -> do return u
+  s <- select $ from return
   -- TODO: Get checkin preference from user profile
   -- For now use one day time span
   let ndt = fromInteger (24*60*60)
@@ -153,7 +153,7 @@ latestCheckIns = do
   traverse (\u -> do
         let n = userName $ entityVal u
         cs <- listCheckIns (userName $ entityVal u) (Just ndt)
-        return (n, (fst <$> cs))
+        return (n, fst <$> cs)
     ) s
 
 verifyPublicCheckIn :: Name           -- ^ Users Name
@@ -168,7 +168,7 @@ verifyPublicCheckIn n c = do
               _              -> Nothing
 
   -- Verify signature
-      mM = S.openSigned <$> mPK <*> (Just (toSigned c))
+      mM = S.openSigned <$> mPK <*> Just (toSigned c)
 
   case mM of
     Just mM' -> case mM' of
@@ -184,7 +184,7 @@ runStorage action = dbConnectionString >>= \c -> P.runSqlite (pack c) $ do
 
 -- | Run storage actions with stdout logging, pooling and stdout migration
 runStoragePool :: StorageT a -> IO a
-runStoragePool action = dbConnectionString >>= \c -> runStdoutLoggingT $ P.withSqlitePool (pack c) 10 $ \pool -> liftIO $ do
+runStoragePool action = dbConnectionString >>= \c -> runStdoutLoggingT $ P.withSqlitePool (pack c) 10 $ \pool -> liftIO $
   flip runSqlPersistMPool pool $ do
-    runMigrationSilent migrateAll >>= liftIO . (mapM_ (putStrLn . unpack))
+    runMigrationSilent migrateAll >>= liftIO . mapM_ (putStrLn . unpack)
     action

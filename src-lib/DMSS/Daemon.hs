@@ -36,16 +36,15 @@ type Response = String
 
 checkerDaemon :: Command -> IO Response
 checkerDaemon Status  = return "Daemon is running!"
-checkerDaemon Version = return $ "Daemon version: " ++ (showVersion version)
+checkerDaemon Version = return $ "Daemon version: " ++ showVersion version
 
-data Options = Options
-  { daemonSilent :: Bool }
+newtype Options = Options { daemonSilent :: Bool }
 
 instance Default Options where
   def = Options False
 
 defaultOptions :: Options
-defaultOptions = (def :: Options)
+defaultOptions = def :: Options
 
 mainLoop :: Options -> StorageT ()
 mainLoop o = do
@@ -53,7 +52,7 @@ mainLoop o = do
   userCheckIns <- latestCheckIns
   -- Valid checkin if any valid checkin with latestCheckIns timeframe
   checkInsValid <- traverse (\(n,ps) ->
-    (,) <$> (pure n)
+    (,) <$> pure n
         <*> foldM (\a p ->
             if a
             then pure a
@@ -63,8 +62,8 @@ mainLoop o = do
   liftIO $ traverse_
             (\(n,v) ->
               if v
-              then logMsgLn o $ (unName n) ++ " has a valid checkin."
-              else logMsgLn o $ (unName n) ++ " has not checked in recently!"
+              then logMsgLn o $ unName n ++ " has a valid checkin."
+              else logMsgLn o $ unName n ++ " has not checked in recently!"
             ) checkInsValid
 
 daemonMain :: Options -> IO ()

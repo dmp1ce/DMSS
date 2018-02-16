@@ -10,8 +10,8 @@ import DMSS.Storage
   , getUserKey
   , removeUser
   , listCheckIns
+  , runStorage
   )
-import DMSS.Storage ( runStorage )
 import DMSS.Storage.Types
   ( BoxKeypairStore (..)
   , mkCheckInProof
@@ -64,7 +64,7 @@ storeUserTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
     -- Check that the fake user key was stored
     k <- getUserKey n
     case k of
-      Nothing -> liftIO $ assertFailure $ "Could not find User based on (" ++ (unName n) ++ ")"
+      Nothing -> liftIO $ assertFailure $ "Could not find User based on (" ++ unName n ++ ")"
       _       -> return ()
   )
 
@@ -81,7 +81,7 @@ removeUserKeyTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
     k <- getUserKey n
     case k of
       Nothing -> return ()
-      _       -> liftIO $ assertFailure $ "Found UserKey based on (" ++ (unName n) ++ ") but shouldn't have"
+      _       -> liftIO $ assertFailure $ "Found UserKey based on (" ++ unName n ++ ") but shouldn't have"
   )
 
 storeCheckInTest :: Assertion
@@ -97,17 +97,17 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
     l <- listCheckIns n Nothing
     -- Verify that only one checkin was returned
     case l of
-      (_:[])    -> return ()
-      x         -> liftIO $ assertFailure $ "Did not find one checkin: " ++ show x
+      [_] -> return ()
+      x   -> liftIO $ assertFailure $ "Did not find one checkin: " ++ show x
 
     -- Create another checkin and verify order is correct
     _ <- storeCheckIn n (mkCheckInProof $ pack "More proof")
     -- Wait a second to ensure last proof is first on the list
-    liftIO $ threadDelay (1000 * 1000 * 1)
+    liftIO $ threadDelay (1000 * 1000)
     let lastProof = mkCheckInProof $ pack "Even more proof"
     _ <- storeCheckIn n lastProof
     l' <- listCheckIns n Nothing
-    if (fst (head l') == lastProof)
+    if fst (head l') == lastProof
       then return ()
       else liftIO $ assertFailure "CheckIns were not in decending order"
   )
@@ -123,20 +123,20 @@ toFromHashSalt = testGroup "Round-trip between PasswordString and HashSalt"
         hs <- createHashSalt password
         (toHashSalt <$> (fst <$> fromHashSalt hs)
                     <*> (snd <$> fromHashSalt hs))
-                @?= (Right hs)
+                @?= Right hs
 
 -- Ensure data that goes into Persistence comes out the same
 prop_userStorage_HashSalt :: HashSalt -> Bool
 prop_userStorage_HashSalt hs =
-  (Right hs) == (P.fromPersistValue . P.toPersistValue) hs
+  Right hs == (P.fromPersistValue . P.toPersistValue) hs
 
 prop_userStorage_BoxKeypairStore :: BoxKeypairStore -> Bool
 prop_userStorage_BoxKeypairStore bkp =
-  (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp
+  Right bkp == (P.fromPersistValue . P.toPersistValue) bkp
 
 prop_userStorage_SignKeypairStore :: SignKeypairStore -> Bool
 prop_userStorage_SignKeypairStore bkp =
-  (Right bkp) == (P.fromPersistValue . P.toPersistValue) bkp
+  Right bkp == (P.fromPersistValue . P.toPersistValue) bkp
 
 prop_UTCTimeStore :: UTCTimeStore -> Bool
-prop_UTCTimeStore uts = (Right uts) == (P.fromPersistValue . P.toPersistValue) uts
+prop_UTCTimeStore uts = Right uts == (P.fromPersistValue . P.toPersistValue) uts

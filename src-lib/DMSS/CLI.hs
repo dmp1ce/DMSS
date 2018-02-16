@@ -24,6 +24,7 @@ import           Data.Version ( showVersion )
 import           Options.Applicative
 import           System.Daemon (runClient)
 import           System.Environment (setEnv)
+import           Control.Monad (mapM_)
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , softline
                                                    , (<$>)
@@ -34,10 +35,11 @@ data Cli = Cli
   , optCommand :: Command }
 
 cliParser :: Parser Cli
-cliParser = Cli <$> (optional $ strOption ( long "homedir"
-                                        <> metavar "DIRECTORY"
-                                        <> help "Change home directory"
-                                         ))
+cliParser = Cli <$> optional (strOption ( long "homedir"
+                                       <> metavar "DIRECTORY"
+                                       <> help "Change home directory"
+                                        )
+                             )
                 <*> idParser
 
 idParser :: Parser Command
@@ -106,32 +108,29 @@ process (Cli Nothing (Id (IdCreate n Nothing))) = do
   else process $ Cli Nothing $ Id $ IdCreate n (Just p)
 
 process (Cli Nothing (Id (IdCreate (Just n) (Just p)))) =
-  processIdCreate n p >> (putStrLn $ n ++ " created")
+  processIdCreate n p >> putStrLn (n ++ " created")
 process (Cli Nothing (Id IdList)) = processIdList >>= putStrLn
-process (Cli Nothing (Id (IdRemove fpr))) = do
-  m <- processIdRemove fpr
-  case m of
-    Nothing -> return ()
-    Just s -> putStrLn s
+process (Cli Nothing (Id (IdRemove fpr))) =
+  processIdRemove fpr >>= mapM_ putStrLn
 
 process (Cli Nothing (CheckIn (CheckInCreate n))) = do
   putStrLn $ "Please enter password for " ++ n ++ ": "
   p <- getLine
   processCheckInCreate (Name n) (fromString p)
 
-process (Cli Nothing (CheckIn CheckInList)) = do
+process (Cli Nothing (CheckIn CheckInList)) =
   putStrLn "CheckIn List command here"
 
 process (Cli Nothing Status) = do
   res <- runCommand DCLI.Status
   print (res :: Maybe String)
 process (Cli Nothing Version) = do
-  putStrLn $ "CLI version: " ++ (showVersion version)
+  putStrLn $ "CLI version: " ++ showVersion version
   res <- runCommand DCLI.Version
   print (res :: Maybe String)
 
 runCommand :: DCLI.Command -> IO (Maybe String)
-runCommand c = runClient "localhost" 5000 c
+runCommand = runClient "localhost" 5000
 
 cliMain :: IO ()
 cliMain = execParser opts >>= process

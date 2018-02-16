@@ -19,10 +19,10 @@ data Command = Id IdCommand
 
 -- | Id command
 data IdCommand = IdCreate (Maybe String) (Maybe String) -- ^ Name of id and contact information
-               | IdRemove (String)                      -- ^ Fingerprint
+               | IdRemove String                      -- ^ Fingerprint
                | IdList deriving (Show)
 
 -- | CheckIn command
-data CheckInCommand = CheckInCreate (String) -- ^ Create new checkin
+data CheckInCommand = CheckInCreate String -- ^ Create new checkin
                     | CheckInList            -- ^ List past checkins
   deriving (Show)

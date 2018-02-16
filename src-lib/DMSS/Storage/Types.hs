@@ -44,7 +44,7 @@ instance PersistField HashSalt where
   toPersistValue (HashSalt p s) =
     PersistList [toPersistValue p, toPersistValue s]
   fromPersistValue v = case fromPersistValue v of
-    Right (p:s:[]) -> HashSalt <$> fromPersistValue p <*> fromPersistValue s
+    Right [p, s] -> HashSalt <$> fromPersistValue p <*> fromPersistValue s
     Left t  -> Left . toS $ show t
     Right r -> Left . toS $ "Did not recieve the expected two values."
                              ++ show r
@@ -87,7 +87,7 @@ instance PersistField BoxKeypairStore where
   toPersistValue (BoxKeypairStore sk pk) =
     PersistList [toPersistValue sk, toPersistValue pk]
   fromPersistValue v = case fromPersistValue v of
-    Right (sk:pk:[]) -> BoxKeypairStore <$> fromPersistValue sk
+    Right [sk, pk] -> BoxKeypairStore <$> fromPersistValue sk
                                         <*> fromPersistValue pk
     Left t  -> Left . toS $ show t
     Right r -> Left . toS $ "Did not recieve the expected two values."
@@ -104,7 +104,7 @@ instance PersistField SignKeypairStore where
   toPersistValue (SignKeypairStore sk pk) =
     PersistList [toPersistValue sk, toPersistValue pk]
   fromPersistValue v = case fromPersistValue v of
-    Right (sk:pk:[]) -> SignKeypairStore <$> fromPersistValue sk
+    Right [sk, pk] -> SignKeypairStore <$> fromPersistValue sk
                                          <*> fromPersistValue pk
     Left t  -> Left . toS $ show t
     Right r -> Left . toS $ "Did not recieve the expected two values."

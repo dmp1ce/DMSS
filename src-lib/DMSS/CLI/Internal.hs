@@ -62,7 +62,7 @@ processIdCreate n password = do
   -- Derive symmetric key with password.
   salt <- either (die . T.unpack) (return . snd) (fromHashSalt hs)
 
-  let symmetricKey = (derive (fromString password) salt sensitivePolicy :: SB.Key)
+  let symmetricKey = derive (fromString password) salt sensitivePolicy :: SB.Key
 
   -- TODO: Seed could be exported as a mnemonic so identity could be restored on another device
   -- Create keypair seed and encrypt it for later use
@@ -102,7 +102,7 @@ processIdList = do
           PP.$$ PP.nest nameColWidth (PP.text (ellipsis emailColWidth e))
           PP.$$ PP.nest (nameColWidth+emailColWidth) (PP.text f)
     ellipsis n s
-      | ((length s) > (n-4)) = (take (n-4) s) ++ "..."
+      | length s > (n-4) = take (n-4) s ++ "..."
       | otherwise            = s
     dataRow :: User -> PP.Doc
     dataRow u =
@@ -124,22 +124,22 @@ processCheckInCreate n p = runStorage $ do
   -- Verify password is correct for user
   maybeUser <- getBy $ UniqueName n
   user <- case maybeUser of
-    Nothing -> liftIO $ die $ "User " ++ (unName n) ++ " not found."
+    Nothing -> liftIO $ die $ "User " ++ unName n ++ " not found."
     Just (Entity _ u) -> return u
 
   (passHash, symmSalt) <- liftIO $ either (die . T.unpack) return $
                                   fromHashSalt $ userHashSalt user
   let symmKey = derive p symmSalt sensitivePolicy
-      signKeyStore = (userSignKeypairStore) user
+      signKeyStore = userSignKeypairStore user
   sMessage <- if verifyPassword passHash p
   -- Decrypt keypair
-  then case (decryptSignKeypair symmKey signKeyStore) of
+  then case decryptSignKeypair symmKey signKeyStore of
     Right (S.Keypair secr _) -> liftIO $ do
       -- Sign message
       currTime <- isoFormatCurrentUTCTime
       return $ S.sign' secr (toS currTime :: BS8.ByteString)
     Left e  -> liftIO $ die e
-  else liftIO $ die $ "Incorrect password for " ++ (unName n) ++ "."
+  else liftIO $ die $ "Incorrect password for " ++ unName n ++ "."
 
   _ <- storeCheckIn n (fromSigned sMessage)
   return ()

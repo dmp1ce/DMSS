@@ -35,4 +35,4 @@ toUTCTime = posixSecondsToUTCTime . fromInteger . toInteger
 
 isoFormatCurrentUTCTime :: IO String
 isoFormatCurrentUTCTime =
-  (formatTime defaultTimeLocale rfc822DateFormat) <$> getCurrentTime
+  formatTime defaultTimeLocale rfc822DateFormat <$> getCurrentTime

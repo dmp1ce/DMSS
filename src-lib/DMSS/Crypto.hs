@@ -42,13 +42,13 @@ import qualified Data.ByteString.Base64 as B64
 
 encryptBoxKeypair :: Key -> B.Keypair -> IO BoxKeypairStore
 encryptBoxKeypair symKey (B.Keypair sk pk) = do
-  skText <- getCiphertext <$> ((secretBox symKey) . unSized . reveal . B.unSecretKey) sk
+  skText <- getCiphertext <$> (secretBox symKey . unSized . reveal . B.unSecretKey) sk
   let pkText = (fromPlaintext . unSized . B.unPublicKey) pk
   return $ BoxKeypairStore (B64.encode skText) (B64.encode pkText)
 
 encryptSignKeypair :: Key -> S.Keypair -> IO SignKeypairStore
 encryptSignKeypair symKey (S.Keypair sk pk) = do
-  skText <- getCiphertext <$> ((secretBox symKey) . reveal . S.unSecretKey) sk
+  skText <- getCiphertext <$> (secretBox symKey . reveal . S.unSecretKey) sk
   let pkText = (fromPlaintext . S.unPublicKey) pk
   return $ SignKeypairStore (B64.encode skText) (B64.encode pkText)
 

@@ -21,7 +21,7 @@ daemonStartUp = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Start daemon silently
     t <- forkIO $ daemonMain (defaultOptions { daemonSilent = True } )
     -- Allow Daemon to start. 1 second delay
-    threadDelay (1000 * 1000 * 1)
+    threadDelay (1000 * 1000)
     -- Verify it is running with status command
     r <- runCommand Status
 
