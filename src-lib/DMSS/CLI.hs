@@ -14,6 +14,7 @@ module DMSS.CLI where
 import           DMSS.CLI.Command
 import           DMSS.CLI.Internal
 import           DMSS.Storage ( Name (..))
+import           DMSS.Daemon.Common ( cliPort )
 
 import Data.String ( fromString )
 import qualified DMSS.Daemon.Command as DCLI
@@ -22,7 +23,7 @@ import           Paths_DMSS ( version )
 import           Data.Monoid ((<>))
 import           Data.Version ( showVersion )
 import           Options.Applicative
-import           System.Daemon (runClient)
+import           System.Daemon ( runClient )
 import           System.Environment (setEnv)
 import           Control.Monad (mapM_)
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
@@ -130,7 +131,7 @@ process (Cli Nothing Version) = do
   print (res :: Maybe String)
 
 runCommand :: DCLI.Command -> IO (Maybe String)
-runCommand = runClient "localhost" 5000
+runCommand = runClient "localhost" cliPort
 
 cliMain :: IO ()
 cliMain = execParser opts >>= process

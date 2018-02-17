@@ -15,6 +15,7 @@ module DMSS.Daemon where
 
 import DMSS.Config
 import DMSS.Daemon.Command
+import DMSS.Daemon.Common ( cliPort, peerPort )
 import DMSS.Storage ( StorageT, runStoragePool
                     , latestCheckIns, verifyPublicCheckIn
                     , unName
@@ -30,7 +31,9 @@ import Data.Version ( showVersion )
 import Data.Foldable ( traverse_ )
 import System.Daemon
 import System.IO.Silently (silence)
-
+import Network.Socket
+  ( socket, Socket, defaultProtocol, bind, iNADDR_ANY, listen, close
+  , Family (AF_INET), SocketType (Stream), SockAddr (SockAddrInet), accept )
 
 type Response = String
 
@@ -46,8 +49,8 @@ instance Default Options where
 defaultOptions :: Options
 defaultOptions = def :: Options
 
-mainLoop :: Options -> StorageT ()
-mainLoop o = do
+eventLoop :: Options -> StorageT ()
+eventLoop o = do
   -- Check checkin status of all users
   userCheckIns <- latestCheckIns
   -- Valid checkin if any valid checkin with latestCheckIns timeframe
@@ -66,22 +69,38 @@ mainLoop o = do
               else logMsgLn o $ unName n ++ " has not checked in recently!"
             ) checkInsValid
 
+peerLoop :: Socket -> IO ()
+peerLoop sock = do
+  conn <- accept sock
+  -- TODO: Figure out what to do with this connection
+  putStrLn $ "Recieved a connection (" ++ show conn ++ ") ."
+  close sock
+  peerLoop sock
+
 daemonMain :: Options -> IO ()
 daemonMain o = do
   -- Make sure local directory exists for storing data
   createLocalDirectory
 
   -- Start event loop
-  logMsg o "Starting event loop..."
+  logMsgLn o "Starting event loop"
   -- Start daemon process
   _ <- forkIO $ forever $ do
     let ms = 10000
         num_ms = 1000
     threadDelay (ms * num_ms)
-    runStoragePool $ mainLoop o
-  logMsgLn o "Done"
+    runStoragePool $ eventLoop o
 
-  runInForeground 5000 (commandReceiver checkerDaemon)
+  logMsgLn o $ "Listening for peers on port " ++ show peerPort
+  sock <- socket AF_INET Stream defaultProtocol
+  --setSockOptions sock ReuseAddr 1
+  bind sock (SockAddrInet peerPort iNADDR_ANY)
+  listen sock 2
+  _ <- forkIO $ peerLoop sock
+
+  logMsgLn o $ "Listening for CLI commands on port " ++ show cliPort
+  logMsgLn o "== CTRL-C to quit =="
+  runInForeground cliPort (commandReceiver checkerDaemon)
 
 -- Log messages functions. Simply outputs to stdout for now.
 logMsg :: Options -> String -> IO ()
