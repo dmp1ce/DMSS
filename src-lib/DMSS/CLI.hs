@@ -41,10 +41,10 @@ cliParser = Cli <$> optional (strOption ( long "homedir"
                                        <> help "Change home directory"
                                         )
                              )
-                <*> idParser
+                <*> commandParser
 
-idParser :: Parser Command
-idParser = hsubparser
+commandParser :: Parser Command
+commandParser = hsubparser
   ( command "id" (info (Id <$> idCommandParser)
     ( progDesc "Manage IDs" ))
  <> command "checkin" (info (CheckIn <$> checkInCommandParser)

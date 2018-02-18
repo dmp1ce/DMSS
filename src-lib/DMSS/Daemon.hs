@@ -15,6 +15,7 @@ module DMSS.Daemon where
 
 import DMSS.Config
 import DMSS.Daemon.Command
+import DMSS.Daemon.CLI ( Cli, Options, Options (daemonSilent), daemonMain )
 import DMSS.Daemon.Common ( cliPort, peerPort )
 import DMSS.Storage ( StorageT, runStoragePool
                     , latestCheckIns, verifyPublicCheckIn
@@ -26,9 +27,9 @@ import Control.Concurrent ( forkIO, threadDelay )
 import Control.Monad (forever, foldM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Pipe.C3 ( commandReceiver )
-import Data.Default (def, Default)
 import Data.Version ( showVersion )
 import Data.Foldable ( traverse_ )
+import Data.Default (def)
 import System.Daemon
 import System.IO.Silently (silence)
 import Network.Socket
@@ -40,14 +41,6 @@ type Response = String
 checkerDaemon :: Command -> IO Response
 checkerDaemon Status  = return "Daemon is running!"
 checkerDaemon Version = return $ "Daemon version: " ++ showVersion version
-
-newtype Options = Options { daemonSilent :: Bool }
-
-instance Default Options where
-  def = Options False
-
-defaultOptions :: Options
-defaultOptions = def :: Options
 
 eventLoop :: Options -> StorageT ()
 eventLoop o = do
@@ -77,8 +70,11 @@ peerLoop sock = do
   close sock
   peerLoop sock
 
-daemonMain :: Options -> IO ()
-daemonMain o = do
+daemonMain :: IO ()
+daemonMain = DMSS.Daemon.CLI.daemonMain (process def)
+
+process :: Options -> Cli -> IO ()
+process o _ = do
   -- Make sure local directory exists for storing data
   createLocalDirectory
 

@@ -29,6 +29,7 @@ library
   hs-source-dirs:    src-lib
   exposed-modules:   DMSS.Daemon
                    , DMSS.Daemon.Command
+                   , DMSS.Daemon.CLI
                    , DMSS.Daemon.Common
                    , DMSS.CLI
                    , DMSS.CLI.Internal
