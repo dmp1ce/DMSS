@@ -15,12 +15,8 @@ import System.Directory   ( createDirectoryIfMissing )
 
 -- | Default data directory for DMSS
 localDirectory :: IO String
-localDirectory = getEnv "HOME" >>= \h -> pure $ h ++ "/.local/share/dmss"
-
--- | GPG context directory location
-gpgContext :: IO String
-gpgContext = localDirectory >>= \l -> pure $ l ++ "/gpg"
+localDirectory = (++) <$> getEnv "HOME" <*> pure "/.local/share/dmss"
 
 -- | Creates the data directory if it doesn't exist already
 createLocalDirectory :: IO ()
-createLocalDirectory = gpgContext >>= createDirectoryIfMissing True
+createLocalDirectory = localDirectory >>= createDirectoryIfMissing True

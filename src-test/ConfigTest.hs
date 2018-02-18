@@ -21,7 +21,7 @@ tempDir = "configTest"
 createConfigDirectory :: Assertion
 createConfigDirectory = withTemporaryTestDirectory tempDir
   ( \_ -> do
-    g <- gpgContext
-    gExists <- doesDirectoryExist g
-    assertBool ("GPG context directory (" ++ g ++ ")does not exist") gExists
+    l <- localDirectory
+    lExists <- doesDirectoryExist l
+    assertBool ("Local directory (" ++ l ++ ") does not exist") lExists
   )

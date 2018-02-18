@@ -16,20 +16,15 @@ import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    )
 import Options.Applicative
   ( Parser, optional, strOption, long, metavar, help, execParser, info, helper
-  , fullDesc, progDescDoc, header )
-import Data.Default (def, Default)
+  , fullDesc, progDescDoc, header, flag, short )
 import Data.Monoid ( (<>) )
 
-newtype Options = Options { daemonSilent :: Bool }
-
-instance Default Options where
-  def = Options False
-
-defaultOptions :: Options
-defaultOptions = def :: Options
-
 data Cli = Cli
-  { optHomedir :: Maybe String }
+  { optHomedir :: Maybe String
+  , flagSilent :: FlagSilent
+  }
+
+data FlagSilent = SilentOff | SilentOn deriving Eq
 
 daemonParser :: Parser Cli
 daemonParser = Cli <$> optional (strOption ( long "homedir"
@@ -37,6 +32,11 @@ daemonParser = Cli <$> optional (strOption ( long "homedir"
                          <> help "Change home directory"
                           )
                        )
+                   <*> flag SilentOff SilentOn
+                      ( long "silent"
+                        <> short 's'
+                        <> help "Silence output from daemon"
+                      )
                    -- <*> idParser
 
 daemonMain :: (Cli -> IO ()) -> IO ()
