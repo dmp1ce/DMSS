@@ -13,7 +13,7 @@ module DMSS.Daemon.Common where
 
 import Network.Socket (PortNumber)
 
-cliPort :: Int
+cliPort :: PortNumber
 cliPort = 5006
 
 peerPort :: PortNumber

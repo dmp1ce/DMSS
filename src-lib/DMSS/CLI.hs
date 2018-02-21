@@ -26,6 +26,7 @@ import           Options.Applicative
 import           System.Daemon ( runClient )
 import           System.Environment (setEnv)
 import           Control.Monad (mapM_)
+import           Network.Socket (PortNumber)
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , softline
                                                    , (<$>)
@@ -33,6 +34,7 @@ import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
 
 data Cli = Cli
   { optHomedir :: Maybe String
+  , optPort :: PortNumber
   , optCommand :: Command }
 
 cliParser :: Parser Cli
@@ -41,6 +43,12 @@ cliParser = Cli <$> optional (strOption ( long "homedir"
                                        <> help "Change home directory"
                                         )
                              )
+                <*> option auto
+                        (  long "port"
+                        <> value cliPort
+                        <> metavar "PORT"
+                        <> help "Daemon CLI port to connect to"
+                        )
                 <*> commandParser
 
 commandParser :: Parser Command
@@ -87,16 +95,16 @@ idCommandParser = hsubparser
      <> help "Password to encrypt user secret on this device" )
 
 process :: Cli -> IO ()
-process (Cli (Just homeStr) c) = do
+process (Cli (Just homeStr) p c) = do
   -- Set home directory
   setEnv "HOME" homeStr
-  process (Cli Nothing c)
+  process (Cli Nothing p c)
 
-process (Cli Nothing (Id (IdCreate Nothing e))) = do
+process (Cli Nothing p (Id (IdCreate Nothing e))) = do
   putStrLn "Please enter the name for the ID:"
   n <- getLine
-  process $ Cli Nothing $ Id $ IdCreate (Just n) e
-process (Cli Nothing (Id (IdCreate n Nothing))) = do
+  process $ Cli Nothing p $ Id $ IdCreate (Just n) e
+process (Cli Nothing pn (Id (IdCreate n Nothing))) = do
   putStrLn "Please enter password to encrypt keys with."
   p <- getLine
   putStrLn "Please ensure that you remember the password"
@@ -105,33 +113,33 @@ process (Cli Nothing (Id (IdCreate n Nothing))) = do
   p' <- getLine
   if p /= p'
   then do putStrLn "Passwords did not match."
-          process $ Cli Nothing $ Id $ IdCreate n Nothing
-  else process $ Cli Nothing $ Id $ IdCreate n (Just p)
+          process $ Cli Nothing pn $ Id $ IdCreate n Nothing
+  else process $ Cli Nothing pn $ Id $ IdCreate n (Just p)
 
-process (Cli Nothing (Id (IdCreate (Just n) (Just p)))) =
+process (Cli Nothing _ (Id (IdCreate (Just n) (Just p)))) =
   processIdCreate n p >> putStrLn (n ++ " created")
-process (Cli Nothing (Id IdList)) = processIdList >>= putStrLn
-process (Cli Nothing (Id (IdRemove fpr))) =
+process (Cli Nothing _ (Id IdList)) = processIdList >>= putStrLn
+process (Cli Nothing _ (Id (IdRemove fpr))) =
   processIdRemove fpr >>= mapM_ putStrLn
 
-process (Cli Nothing (CheckIn (CheckInCreate n))) = do
+process (Cli Nothing _ (CheckIn (CheckInCreate n))) = do
   putStrLn $ "Please enter password for " ++ n ++ ": "
   p <- getLine
   processCheckInCreate (Name n) (fromString p)
 
-process (Cli Nothing (CheckIn CheckInList)) =
+process (Cli Nothing _ (CheckIn CheckInList)) =
   putStrLn "CheckIn List command here"
 
-process (Cli Nothing Status) = do
-  res <- runCommand DCLI.Status
+process (Cli Nothing pn Status) = do
+  res <- runCommand pn DCLI.Status
   print (res :: Maybe String)
-process (Cli Nothing Version) = do
+process (Cli Nothing pn Version) = do
   putStrLn $ "CLI version: " ++ showVersion version
-  res <- runCommand DCLI.Version
+  res <- runCommand pn DCLI.Version
   print (res :: Maybe String)
 
-runCommand :: DCLI.Command -> IO (Maybe String)
-runCommand = runClient "localhost" cliPort
+runCommand :: PortNumber -> DCLI.Command -> IO (Maybe String)
+runCommand = (runClient "localhost") . fromIntegral
 
 cliMain :: IO ()
 cliMain = execParser opts >>= process

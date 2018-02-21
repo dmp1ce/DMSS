@@ -16,7 +16,6 @@ module DMSS.Daemon where
 import DMSS.Config (createLocalDirectory)
 import DMSS.Daemon.Command
 import DMSS.Daemon.CLI ( Cli (Cli), daemonMain, FlagSilent (SilentOn) )
-import DMSS.Daemon.Common ( cliPort, peerPort )
 import DMSS.Storage ( StorageT, runStoragePool
                     , latestCheckIns, verifyPublicCheckIn
                     , unName
@@ -43,7 +42,7 @@ checkerDaemon Status  = return "Daemon is running!"
 checkerDaemon Version = return $ "Daemon version: " ++ showVersion version
 
 eventLoop :: Cli -> StorageT ()
-eventLoop (Cli _ s) = do
+eventLoop (Cli _ _ _ s) = do
   -- Check checkin status of all users
   userCheckIns <- latestCheckIns
   -- Valid checkin if any valid checkin with latestCheckIns timeframe
@@ -74,7 +73,7 @@ daemonMain :: IO ()
 daemonMain = DMSS.Daemon.CLI.daemonMain process
 
 process :: Cli -> IO ()
-process cli@(Cli h s) = do
+process cli@(Cli h cp pp s) = do
   -- Make sure local directory exists for storing data
   mapM_ (setEnv "HOME") h
   createLocalDirectory
@@ -88,16 +87,16 @@ process cli@(Cli h s) = do
     threadDelay (ms * num_ms)
     runStoragePool $ eventLoop cli
 
-  logMsgLn s $ "Listening for peers on port " ++ show peerPort
+  logMsgLn s $ "Listening for peers on port " ++ show pp
   sock <- socket AF_INET Stream defaultProtocol
   --setSockOptions sock ReuseAddr 1
-  bind sock (SockAddrInet peerPort iNADDR_ANY)
+  bind sock (SockAddrInet pp iNADDR_ANY)
   listen sock 2
   _ <- forkIO $ peerLoop sock
 
-  logMsgLn s $ "Listening for CLI commands on port " ++ show cliPort
+  logMsgLn s $ "Listening for CLI commands on port " ++ show cp
   logMsgLn s "== CTRL-C to quit =="
-  runInForeground cliPort (commandReceiver checkerDaemon)
+  runInForeground (fromIntegral cp) (commandReceiver checkerDaemon)
 
 -- Log messages functions. Simply outputs to stdout for now.
 logMsg :: FlagSilent -> String -> IO ()
