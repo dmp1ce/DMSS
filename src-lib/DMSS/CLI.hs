@@ -25,7 +25,7 @@ import           Data.Version ( showVersion )
 import           Options.Applicative
 import           System.Daemon ( runClient )
 import           System.Environment (setEnv)
-import           Control.Monad (mapM_)
+import           Data.Foldable (traverse_)
 import           Network.Socket (PortNumber)
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , softline
@@ -35,7 +35,10 @@ import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
 data Cli = Cli
   { optHomedir :: Maybe String
   , optPort :: PortNumber
+  , flagSilent :: FlagSilent
   , optCommand :: Command }
+
+data FlagSilent = SilentOff | SilentOn deriving Eq
 
 cliParser :: Parser Cli
 cliParser = Cli <$> optional (strOption ( long "homedir"
@@ -49,6 +52,12 @@ cliParser = Cli <$> optional (strOption ( long "homedir"
                         <> metavar "PORT"
                         <> help "Daemon CLI port to connect to"
                         )
+                <*> flag SilentOff SilentOn
+                     (  long "silent"
+                     <> short 's'
+                     <> help "Silence output from CLI where possible. \
+                             \Still allows prompting the user."
+                     )
                 <*> commandParser
 
 commandParser :: Parser Command
@@ -95,16 +104,16 @@ idCommandParser = hsubparser
      <> help "Password to encrypt user secret on this device" )
 
 process :: Cli -> IO ()
-process (Cli (Just homeStr) p c) = do
+process (Cli (Just homeStr) p s c) = do
   -- Set home directory
   setEnv "HOME" homeStr
-  process (Cli Nothing p c)
+  process (Cli Nothing p s c)
 
-process (Cli Nothing p (Id (IdCreate Nothing e))) = do
+process (Cli Nothing p s (Id (IdCreate Nothing e))) = do
   putStrLn "Please enter the name for the ID:"
   n <- getLine
-  process $ Cli Nothing p $ Id $ IdCreate (Just n) e
-process (Cli Nothing pn (Id (IdCreate n Nothing))) = do
+  process $ Cli Nothing p s $ Id $ IdCreate (Just n) e
+process (Cli Nothing pn s (Id (IdCreate n Nothing))) = do
   putStrLn "Please enter password to encrypt keys with."
   p <- getLine
   putStrLn "Please ensure that you remember the password"
@@ -113,30 +122,30 @@ process (Cli Nothing pn (Id (IdCreate n Nothing))) = do
   p' <- getLine
   if p /= p'
   then do putStrLn "Passwords did not match."
-          process $ Cli Nothing pn $ Id $ IdCreate n Nothing
-  else process $ Cli Nothing pn $ Id $ IdCreate n (Just p)
+          process $ Cli Nothing pn s $ Id $ IdCreate n Nothing
+  else process $ Cli Nothing pn s $ Id $ IdCreate n (Just p)
 
-process (Cli Nothing _ (Id (IdCreate (Just n) (Just p)))) =
-  processIdCreate n p >> putStrLn (n ++ " created")
-process (Cli Nothing _ (Id IdList)) = processIdList >>= putStrLn
-process (Cli Nothing _ (Id (IdRemove fpr))) =
-  processIdRemove fpr >>= mapM_ putStrLn
+process (Cli Nothing _ s (Id (IdCreate (Just n) (Just p)))) =
+  processIdCreate n p >> msgLn s (n ++ " created")
+process (Cli Nothing _ s (Id IdList)) = processIdList >>= msgLn s
+process (Cli Nothing _ s (Id (IdRemove fpr))) =
+  processIdRemove fpr >>= traverse_ (msgLn s)
 
-process (Cli Nothing _ (CheckIn (CheckInCreate n))) = do
+process (Cli Nothing _ _ (CheckIn (CheckInCreate n))) = do
   putStrLn $ "Please enter password for " ++ n ++ ": "
   p <- getLine
   processCheckInCreate (Name n) (fromString p)
 
-process (Cli Nothing _ (CheckIn CheckInList)) =
-  putStrLn "CheckIn List command here"
+process (Cli Nothing _ _ (CheckIn CheckInList)) =
+  putStrLn "TODO: CheckIn List command here"
 
-process (Cli Nothing pn Status) = do
+process (Cli Nothing pn s Status) = do
   res <- runCommand pn DCLI.Status
-  print (res :: Maybe String)
-process (Cli Nothing pn Version) = do
-  putStrLn $ "CLI version: " ++ showVersion version
+  traverse_ (msgLn s) res
+process (Cli Nothing pn s Version) = do
+  msgLn s $ "CLI version: " ++ showVersion version
   res <- runCommand pn DCLI.Version
-  print (res :: Maybe String)
+  traverse_ (msgLn s) res
 
 runCommand :: PortNumber -> DCLI.Command -> IO (Maybe String)
 runCommand = (runClient "localhost") . fromIntegral
@@ -154,3 +163,6 @@ cliMain = execParser opts >>= process
                       )
                     )
      <> header "DMSS Command Line Interface" )
+
+msgLn :: FlagSilent -> String -> IO ()
+msgLn s msg = if s == SilentOff then putStrLn msg else return ()

@@ -80,11 +80,11 @@ twoDaemonStartUp = withTemporaryTestDirectory tempDir $ \h1-> do
 
   -- Verify both daemons are running with status command
   --r1 <- withArgs [] (runCommand cliPort Status)
-  _ <- withArgs ["status", "--homedir=" ++ h1, "--port=7006"] (cliMain)
+  _ <- withArgs ["--silent", "--homedir=" ++ h1, "--port=7006", "status"] (cliMain)
   killThread t1
 
   threadDelay (1000 * 1000)
-  _ <- withArgs ["status", "--homedir=" ++ h2, "--port=6006"] (cliMain)
+  _ <- withArgs ["--silent", "--homedir=" ++ h2, "--port=6006", "status"] (cliMain)
   killThread t2
 
   -- Make sure home directory is correct
