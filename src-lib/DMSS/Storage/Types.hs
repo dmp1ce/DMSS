@@ -24,10 +24,12 @@ import Data.Time.Clock ( UTCTime )
 import Database.Persist ( PersistField, fromPersistValue, toPersistValue )
 import Database.Persist.Sql ( PersistFieldSql, sqlType )
 import Database.Persist.Types ( PersistValue (PersistList)
-                              , SqlType (SqlString, SqlInt64)
+                              , SqlType (SqlString, SqlInt64, SqlInt32)
                               )
 import qualified Data.ByteString.Base64 as B64
 import DMSS.Common ( toSeconds, toUTCTime )
+import Network.Socket ( PortNumber )
+import Data.Word ( Word16 )
 
 -- For testing
 import Test.QuickCheck
@@ -36,6 +38,17 @@ import Test.QuickCheck
    )
 
 newtype Name = Name { unName :: String } deriving (Show, PersistField, PersistFieldSql)
+newtype Host = Host String deriving (Show, PersistField, PersistFieldSql)
+
+newtype Port = Port PortNumber deriving (Show, Eq)
+
+instance PersistField Port where
+  toPersistValue (Port pn) = toPersistValue (fromIntegral pn :: Word16)
+  fromPersistValue v = case fromPersistValue v of
+    Right v' -> Right $ Port $ read v'
+    Left e   -> (Left . toS . show) e
+instance PersistFieldSql Port where
+  sqlType _ = SqlInt32
 
 -- | Represents password hash and salt to decrypt keypairs
 data HashSalt = HashSalt ByteString ByteString deriving (Eq, Show)
@@ -158,3 +171,8 @@ instance Arbitrary UTCTimeStore where
   arbitrary = do
     i <- arbitrary
     return $ UTCTimeStore (toUTCTime i)
+
+instance Arbitrary Port where
+  arbitrary = do
+    i <- arbitrary
+    return $ Port $ fromInteger i

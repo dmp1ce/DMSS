@@ -26,6 +26,7 @@ import           Options.Applicative
 import           System.Daemon ( runClient )
 import           System.Environment (setEnv)
 import           Data.Foldable (traverse_)
+import           Control.Monad (when)
 import           Network.Socket (PortNumber)
 import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
                                                    , softline
@@ -148,7 +149,7 @@ process (Cli Nothing pn s Version) = do
   traverse_ (msgLn s) res
 
 runCommand :: PortNumber -> DCLI.Command -> IO (Maybe String)
-runCommand = (runClient "localhost") . fromIntegral
+runCommand = runClient "localhost" . fromIntegral
 
 cliMain :: IO ()
 cliMain = execParser opts >>= process
@@ -165,4 +166,4 @@ cliMain = execParser opts >>= process
      <> header "DMSS Command Line Interface" )
 
 msgLn :: FlagSilent -> String -> IO ()
-msgLn s msg = if s == SilentOff then putStrLn msg else return ()
+msgLn s msg = when (s == SilentOff) $ putStrLn msg

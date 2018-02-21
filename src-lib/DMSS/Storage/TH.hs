@@ -38,4 +38,9 @@ CheckIn
   raw_data BS8.ByteString
   created UTCTimeStore        -- ^ Creation time
   deriving Show
+Peer
+  host Host                   -- ^ Host of peer
+  port Port                   -- ^ Port to connect on
+  created UTCTimeStore        -- ^ Creation time
+  deriving Show
 |]

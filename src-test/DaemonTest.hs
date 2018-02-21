@@ -43,7 +43,7 @@ daemonStartUp = withTemporaryTestDirectory tempDir ( \homedir -> do
     l <- localDirectory
     assertBool
       (homedir ++ " is not the prefix of actual home directory " ++ l)
-      (isPrefixOf homedir l)
+      (homedir `isPrefixOf` l)
 
     Just "Daemon is running!" @=? r
   )
@@ -65,7 +65,7 @@ twoDaemonStartUp = withTemporaryTestDirectory tempDir $ \h1-> do
   l1 <- localDirectory
   assertBool
     (h1 ++ " is not the prefix of actual home directory " ++ l1)
-    (isPrefixOf h1 l1)
+    (h1 `isPrefixOf` l1)
 
   -- Start daemon two silently with different home directory
   let h2 = h1 ++ "daemon2"
@@ -80,15 +80,15 @@ twoDaemonStartUp = withTemporaryTestDirectory tempDir $ \h1-> do
 
   -- Verify both daemons are running with status command
   --r1 <- withArgs [] (runCommand cliPort Status)
-  _ <- withArgs ["--silent", "--homedir=" ++ h1, "--port=7006", "status"] (cliMain)
+  _ <- withArgs ["--silent", "--homedir=" ++ h1, "--port=7006", "status"] cliMain
   killThread t1
 
   threadDelay (1000 * 1000)
-  _ <- withArgs ["--silent", "--homedir=" ++ h2, "--port=6006", "status"] (cliMain)
+  _ <- withArgs ["--silent", "--homedir=" ++ h2, "--port=6006", "status"] cliMain
   killThread t2
 
   -- Make sure home directory is correct
   l2 <- localDirectory
   assertBool
     (h2 ++ " is not the prefix of actual home directory " ++ l1)
-    (isPrefixOf h2 l2)
+    (h2 `isPrefixOf` l2)
