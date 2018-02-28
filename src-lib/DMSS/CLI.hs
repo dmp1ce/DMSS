@@ -35,7 +35,7 @@ import qualified Text.PrettyPrint.ANSI.Leijen as P ( text
 
 data Cli = Cli
   { optHomedir :: Maybe String
-  , optPort :: PortNumber
+  , optPort    :: PortNumber
   , flagSilent :: FlagSilent
   , optCommand :: Command }
 
