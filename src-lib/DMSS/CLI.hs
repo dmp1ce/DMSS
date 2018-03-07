@@ -65,12 +65,22 @@ commandParser :: Parser Command
 commandParser = hsubparser
   ( command "id" (info (Id <$> idCommandParser)
     ( progDesc "Manage IDs" ))
+ <> command "peer" (info (Peer <$> peerCommandParser)
+    ( progDesc "Modify known peers"))
  <> command "checkin" (info (CheckIn <$> checkInCommandParser)
     ( progDesc "Manage CheckIns"))
  <> command "status" (info (pure Status)
     ( progDesc "Some status about the system"))
  <> command "version" (info (pure Version)
     ( progDesc "Version info here"))
+  )
+
+peerCommandParser :: Parser PeerCommand
+peerCommandParser = hsubparser
+  ( command "create" (info ( PeerCreate
+                             <$> argument str (metavar "HOST")
+                             <*> argument str (metavar "PORT") ) (progDesc "Create Peer"))
+ <> command "list" (info (pure PeerList) (progDesc "List Peers"))
   )
 
 checkInCommandParser :: Parser CheckInCommand
@@ -147,6 +157,8 @@ process (Cli Nothing pn s Version) = do
   msgLn s $ "CLI version: " ++ showVersion version
   res <- runCommand pn DCLI.Version
   traverse_ (msgLn s) res
+
+process (Cli Nothing _ s (Peer _)) = msgLn s "Peer command here!"
 
 runCommand :: PortNumber -> DCLI.Command -> IO (Maybe String)
 runCommand = runClient "localhost" . fromIntegral

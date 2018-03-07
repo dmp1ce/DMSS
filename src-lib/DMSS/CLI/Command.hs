@@ -14,6 +14,7 @@ module DMSS.CLI.Command where
 -- | High level commands
 data Command = Id IdCommand
              | CheckIn CheckInCommand
+             | Peer PeerCommand
              | Version
              | Status deriving (Show)
 
@@ -26,3 +27,9 @@ data IdCommand = IdCreate (Maybe String) (Maybe String) -- ^ Name of id and cont
 data CheckInCommand = CheckInCreate String -- ^ Create new checkin
                     | CheckInList            -- ^ List past checkins
   deriving (Show)
+
+-- | Peer command
+data PeerCommand = PeerCreate String String -- ^ Create new peer
+                 | PeerList                 -- ^ List peer
+  deriving (Show)
+
