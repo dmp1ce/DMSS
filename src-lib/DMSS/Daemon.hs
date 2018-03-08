@@ -19,21 +19,26 @@ import DMSS.Daemon.CLI ( Cli (Cli), daemonMain, FlagSilent (SilentOn) )
 import DMSS.Storage ( StorageT, runStoragePool
                     , latestCheckIns, verifyPublicCheckIn
                     , unName
+                    , dbConnectionString
                     )
+import DMSS.Storage.TH ( migrateAll )
 import Paths_DMSS ( version )
 
 import Control.Concurrent ( forkIO, threadDelay )
 import Control.Monad (forever, foldM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Pipe.C3 ( commandReceiver )
+import Control.Monad.Logger (runStdoutLoggingT)
 import Data.Version ( showVersion )
 import Data.Foldable ( traverse_ )
+import Data.Text ( pack, unpack )
 import System.Daemon
 import System.IO.Silently (silence)
 import System.Environment (setEnv)
 import Network.Socket
   ( socket, Socket, defaultProtocol, bind, iNADDR_ANY, listen, close
   , Family (AF_INET), SocketType (Stream), SockAddr (SockAddrInet), accept )
+import qualified Database.Persist.Sqlite as P
 
 type Response = String
 
@@ -78,21 +83,26 @@ process cli@(Cli h cp pp s) = do
   mapM_ (setEnv "HOME") h
   createLocalDirectory
 
-  -- Start event loop
-  logMsgLn s "Starting event loop"
-  -- Start daemon process
-  _ <- forkIO $ forever $ do
-    let ms = 10000
-        num_ms = 1000
-    threadDelay (ms * num_ms)
-    runStoragePool $ eventLoop cli
+  -- Create shared storage pool for all processes
+  c <- dbConnectionString
+  runStdoutLoggingT $ P.withSqlitePool (pack c) 10 $ \pool -> do
+    -- Run migrations
+    liftIO $ runStoragePool pool $ P.runMigrationSilent migrateAll >>= liftIO . mapM_ (putStrLn . unpack)
 
-  logMsgLn s $ "Listening for peers on port " ++ show pp
-  sock <- socket AF_INET Stream defaultProtocol
-  --setSockOptions sock ReuseAddr 1
-  bind sock (SockAddrInet pp iNADDR_ANY)
-  listen sock 2
-  _ <- forkIO $ peerLoop sock
+    liftIO $ logMsgLn s "Starting event loop"
+    _ <- liftIO $ forkIO $ runStoragePool pool $ forever $ do
+      let ms = 10000
+          num_ms = 1000
+      liftIO $ threadDelay (ms * num_ms)
+      eventLoop cli
+
+    liftIO $ logMsgLn s $ "Listening for peers on port " ++ show pp
+    sock <- liftIO $ socket AF_INET Stream defaultProtocol
+    --setSockOptions sock ReuseAddr 1
+    liftIO $ bind sock (SockAddrInet pp iNADDR_ANY)
+    liftIO $ listen sock 2
+    _ <- liftIO $ forkIO $ peerLoop sock
+    return ()
 
   logMsgLn s $ "Listening for CLI commands on port " ++ show cp
   logMsgLn s "== CTRL-C to quit =="

@@ -46,16 +46,13 @@ import qualified Crypto.Lithium.Sign as S
 
 import qualified Database.Persist.Sqlite as P
 import           Database.Esqueleto
-import           Data.Text ( pack
-                           , unpack
-                           )
+import           Data.Text ( pack )
+import           Data.Pool (Pool)
 import           Data.Time.Clock ( UTCTime, NominalDiffTime
                                  , addUTCTime, getCurrentTime )
 
 import           Control.Monad.IO.Class ( liftIO )
-import           Control.Monad.Logger ( NoLoggingT
-                                      , runStdoutLoggingT
-                                      )
+import           Control.Monad.Logger ( NoLoggingT )
 import           Control.Monad.Trans.Resource ( ResourceT )
 
 dbConnectionString :: IO String
@@ -182,9 +179,6 @@ runStorage action = dbConnectionString >>= \c -> P.runSqlite (pack c) $ do
   _ <- runMigrationSilent migrateAll
   action
 
--- | Run storage actions with stdout logging, pooling and stdout migration
-runStoragePool :: StorageT a -> IO a
-runStoragePool action = dbConnectionString >>= \c -> runStdoutLoggingT $ P.withSqlitePool (pack c) 10 $ \pool -> liftIO $
-  flip runSqlPersistMPool pool $ do
-    runMigrationSilent migrateAll >>= liftIO . mapM_ (putStrLn . unpack)
-    action
+-- | Run storage actions with given pool
+runStoragePool :: Pool SqlBackend -> StorageT a -> IO a
+runStoragePool = flip runSqlPersistMPool
