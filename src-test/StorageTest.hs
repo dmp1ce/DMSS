@@ -11,6 +11,9 @@ import DMSS.Storage
   , removeUser
   , listCheckIns
   , runStorage
+  , Port (Port), Host (Host)
+  , storePeer
+  , listPeers
   )
 import DMSS.Storage.Types
   ( BoxKeypairStore (..)
@@ -19,11 +22,10 @@ import DMSS.Storage.Types
   , HashSalt (HashSalt), fromHashSalt, toHashSalt
   , SignKeypairStore (..)
   , UTCTimeStore
-  , Port
   )
 import DMSS.Crypto ( createHashSalt )
 import Test.Tasty ( TestTree, testGroup )
-import Test.Tasty.HUnit ( Assertion, assertFailure, testCase, (@?=) )
+import Test.Tasty.HUnit ( Assertion, assertBool, assertFailure, testCase, (@?=) )
 import qualified Test.Tasty.QuickCheck as QC
 
 import Common ( withTemporaryTestDirectory )
@@ -35,6 +37,7 @@ tests =
   [ testCase "Store user key test" storeUserTest
   , testCase "Store checkin test" storeCheckInTest
   , testCase "remove_user_key_test" removeUserKeyTest
+  , testCase "Store peer test" storePeerTest
   , toFromHashSalt
   , QC.testProperty "prop_userStorage_HashSalt"
       prop_userStorage_HashSalt
@@ -112,6 +115,18 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
     if fst (head l') == lastProof
       then return ()
       else liftIO $ assertFailure "CheckIns were not in decending order"
+  )
+
+storePeerTest :: Assertion
+storePeerTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
+    -- Store fake peer
+    let h = Host "localhost"
+        p = Port 1000
+    _ <- storePeer h p
+
+    -- Check that the fake user key was stored
+    ps <- listPeers
+    liftIO $ assertBool "No peers stored" $ not $ null ps
   )
 
 toFromHashSalt :: TestTree

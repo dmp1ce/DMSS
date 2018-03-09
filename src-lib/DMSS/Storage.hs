@@ -14,6 +14,8 @@ module DMSS.Storage ( storeCheckIn
                     , verifyPublicCheckIn
                     , storeUser
                     , listUsers
+                    , storePeer
+                    , listPeers
                     , getUserKey
                     , removeUser
                     , CheckInId
@@ -33,6 +35,7 @@ module DMSS.Storage ( storeCheckIn
                     , runStorage
                     , runStoragePool
                     , StorageT
+                    , Port (Port), Host (Host)
                     )
   where
 
@@ -152,6 +155,19 @@ latestCheckIns = do
         cs <- listCheckIns (userName $ entityVal u) (Just ndt)
         return (n, fst <$> cs)
     ) s
+
+-- | Store a Peer
+storePeer :: Host     -- ^ Peer's host
+          -> Port     -- ^ Host port to connect on
+          -> StorageT (Key Peer)
+storePeer host port = do
+  t <- liftIO getCurrentTime
+  insert $ Peer host port (UTCTimeStore t)
+
+listPeers :: StorageT [Peer]
+listPeers = do
+  s <- select $ from return
+  return (entityVal <$> s)
 
 verifyPublicCheckIn :: Name           -- ^ Users Name
                     -> CheckInProof   -- ^ Public CheckIn
