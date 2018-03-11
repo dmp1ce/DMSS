@@ -24,6 +24,8 @@ import DMSS.Storage ( storeUser
                     , SignKeypairStore (..)
                     , runStorage
                     , storeCheckIn
+                    , Host, Port
+                    , listPeers, storePeer
                     )
 import DMSS.Crypto ( fromSigned
                    , encryptBoxKeypair
@@ -31,7 +33,8 @@ import DMSS.Crypto ( fromSigned
                    , createHashSalt
                    )
 import DMSS.Common ( isoFormatCurrentUTCTime )
-import DMSS.Storage.TH ( Unique (..), Key )
+import DMSS.Storage.TH ( Unique (..), Key
+                       , Peer (peerHost, peerPort) )
 import Database.Esqueleto ( Entity(..)
                           , getBy )
 
@@ -156,3 +159,13 @@ processCheckInCreate n p = runStorage $ do
   --let ct = either (\e -> error $ show e) id eitherCT
   --_ <- storeCheckIn (Fingerprint fpr) (CheckInProof $ C.unpack ct)
   --return ()
+
+processPeerCreate :: Host -> Port -> IO Bool
+processPeerCreate h p = do
+  _ <- runStorage $ storePeer h p
+  return True
+
+processPeerList :: IO [(Host,Port)]
+processPeerList = do
+  ps <- runStorage  listPeers
+  return $ ((,) <$> peerHost <*> peerPort) <$> ps

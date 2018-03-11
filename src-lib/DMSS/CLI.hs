@@ -13,7 +13,7 @@ module DMSS.CLI where
 
 import           DMSS.CLI.Command
 import           DMSS.CLI.Internal
-import           DMSS.Storage ( Name (..))
+import           DMSS.Storage ( Name (..), Host (Host), Port (Port))
 import           DMSS.Daemon.Common ( cliPort )
 
 import Data.String ( fromString )
@@ -79,7 +79,8 @@ peerCommandParser :: Parser PeerCommand
 peerCommandParser = hsubparser
   ( command "create" (info ( PeerCreate
                              <$> argument str (metavar "HOST")
-                             <*> argument str (metavar "PORT") ) (progDesc "Create Peer"))
+                             <*> argument str (metavar "PORT") )
+                      (progDesc "Create Peer"))
  <> command "list" (info (pure PeerList) (progDesc "List Peers"))
   )
 
@@ -158,7 +159,14 @@ process (Cli Nothing pn s Version) = do
   res <- runCommand pn DCLI.Version
   traverse_ (msgLn s) res
 
-process (Cli Nothing _ s (Peer _)) = msgLn s "Peer command here!"
+process (Cli Nothing _ s (Peer PeerList)) = do
+  ps <- processPeerList
+  traverse_ (\(Host h, Port p) -> msgLn s $ h ++ ":" ++ show p) ps
+process (Cli Nothing _ s (Peer (PeerCreate h p))) = do
+  r <- processPeerCreate (Host h) (Port (read p))
+  if r
+  then msgLn s $ "Created peer " ++ h ++ ":" ++ p
+  else msgLn s $ "Something went wrong creating peer " ++ h ++ ":" ++ p
 
 runCommand :: PortNumber -> DCLI.Command -> IO (Maybe String)
 runCommand = runClient "localhost" . fromIntegral
