@@ -8,8 +8,9 @@
 --
 -- Dead Man Switch System CLI command module
 --
-
 module DMSS.CLI.Command where
+
+import Network (PortNumber)
 
 -- | High level commands
 data Command = Id IdCommand
@@ -24,12 +25,11 @@ data IdCommand = IdCreate (Maybe String) (Maybe String) -- ^ Name of id and cont
                | IdList deriving (Show)
 
 -- | CheckIn command
-data CheckInCommand = CheckInCreate String -- ^ Create new checkin
-                    | CheckInList            -- ^ List past checkins
+data CheckInCommand = CheckInCreate String  -- ^ Create new checkin
+                    | CheckInList           -- ^ List past checkins
   deriving (Show)
 
 -- | Peer command
-data PeerCommand = PeerCreate String String -- ^ Create new peer
-                 | PeerList                 -- ^ List peer
+data PeerCommand = PeerCreate String PortNumber  -- ^ Create new peer
+                 | PeerList                      -- ^ List peer
   deriving (Show)
-

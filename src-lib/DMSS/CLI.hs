@@ -79,7 +79,7 @@ peerCommandParser :: Parser PeerCommand
 peerCommandParser = hsubparser
   ( command "create" (info ( PeerCreate
                              <$> argument str (metavar "HOST")
-                             <*> argument str (metavar "PORT") )
+                             <*> argument auto (metavar "PORT") )
                       (progDesc "Create Peer"))
  <> command "list" (info (pure PeerList) (progDesc "List Peers"))
   )
@@ -163,10 +163,10 @@ process (Cli Nothing _ s (Peer PeerList)) = do
   ps <- processPeerList
   traverse_ (\(Host h, Port p) -> msgLn s $ h ++ ":" ++ show p) ps
 process (Cli Nothing _ s (Peer (PeerCreate h p))) = do
-  r <- processPeerCreate (Host h) (Port (read p))
+  r <- processPeerCreate (Host h) (Port p)
   if r
-  then msgLn s $ "Created peer " ++ h ++ ":" ++ p
-  else msgLn s $ "Something went wrong creating peer " ++ h ++ ":" ++ p
+  then msgLn s $ "Created peer " ++ h ++ ":" ++ show p
+  else msgLn s $ "Something went wrong creating peer " ++ h ++ ":" ++ show p
 
 runCommand :: PortNumber -> DCLI.Command -> IO (Maybe String)
 runCommand = runClient "localhost" . fromIntegral
