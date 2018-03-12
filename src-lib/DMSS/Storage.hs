@@ -16,6 +16,7 @@ module DMSS.Storage ( storeCheckIn
                     , listUsers
                     , storePeer
                     , listPeers
+                    , removePeer
                     , getUserKey
                     , removeUser
                     , CheckInId
@@ -47,8 +48,9 @@ import           DMSS.Storage.TH
 
 import qualified Crypto.Lithium.Sign as S
 
-import           Database.Persist.Sql (fromSqlKey)
+import           Database.Persist.Sql (fromSqlKey, toSqlKey)
 import qualified Database.Persist.Sqlite as P
+import qualified Database.Persist.Class as PC (delete)
 import           Database.Esqueleto
 import           Data.Text ( pack )
 import           Data.Pool (Pool)
@@ -170,6 +172,9 @@ listPeers :: StorageT [(Int64,Peer)]
 listPeers = do
   s <- select $ from return
   return $ ((,) <$> fromSqlKey . entityKey <*> entityVal) <$> s
+
+removePeer :: Int64 -> StorageT ()
+removePeer i = PC.delete (toSqlKey i :: Key Peer)
 
 verifyPublicCheckIn :: Name           -- ^ Users Name
                     -> CheckInProof   -- ^ Public CheckIn

@@ -82,6 +82,9 @@ peerCommandParser = hsubparser
                              <*> argument auto (metavar "PORT") )
                       (progDesc "Create Peer"))
  <> command "list" (info (pure PeerList) (progDesc "List Peers"))
+ <> command "remove" (info (PeerRemove
+                           <$> argument auto (metavar "INDEX"))
+                      (progDesc "Remove Peer"))
   )
 
 checkInCommandParser :: Parser CheckInCommand
@@ -167,8 +170,7 @@ process (Cli Nothing _ s (Peer (PeerCreate h p))) = do
   if r
   then msgLn s $ "Created peer " ++ h ++ ":" ++ show p
   else msgLn s $ "Something went wrong creating peer " ++ h ++ ":" ++ show p
-process (Cli Nothing _ s (Peer (PeerRemove _))) =
-  msgLn s $ "PeerRemove command here"
+process (Cli Nothing _ _ (Peer (PeerRemove i))) = processPeerRemove i
 
 runCommand :: PortNumber -> DCLI.Command -> IO (Maybe String)
 runCommand = runClient "localhost" . fromIntegral

@@ -25,7 +25,7 @@ import DMSS.Storage ( storeUser
                     , runStorage
                     , storeCheckIn
                     , Host, Port
-                    , listPeers, storePeer
+                    , listPeers, storePeer, removePeer
                     )
 import DMSS.Crypto ( fromSigned
                    , encryptBoxKeypair
@@ -170,3 +170,6 @@ processPeerList :: IO [(Int64,Host,Port)]
 processPeerList = do
   ps <- runStorage  listPeers
   return $ ((,,) <$> fst <*> peerHost . snd <*> peerPort . snd) <$> ps
+
+processPeerRemove :: Int64 -> IO ()
+processPeerRemove i = runStorage $ removePeer i

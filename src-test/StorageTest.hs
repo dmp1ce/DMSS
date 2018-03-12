@@ -14,6 +14,7 @@ import DMSS.Storage
   , Port (Port), Host (Host)
   , storePeer
   , listPeers
+  , removePeer
   )
 import DMSS.Storage.Types
   ( BoxKeypairStore (..)
@@ -38,6 +39,7 @@ tests =
   , testCase "Store checkin test" storeCheckInTest
   , testCase "remove_user_key_test" removeUserKeyTest
   , testCase "Store peer test" storePeerTest
+  , testCase "Remove peer test" removePeerTest
   , toFromHashSalt
   , QC.testProperty "prop_userStorage_HashSalt"
       prop_userStorage_HashSalt
@@ -118,15 +120,26 @@ storeCheckInTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
   )
 
 storePeerTest :: Assertion
-storePeerTest = withTemporaryTestDirectory tempDir ( \_ -> runStorage $ do
-    -- Store fake peer
-    let h = Host "localhost"
-        p = Port 1000
-    _ <- storePeer h p
+storePeerTest = withTemporaryTestDirectory tempDir
+  (\_ -> runStorage $ do
+      -- Store fake peer
+      _ <- storePeer (Host "locahost") (Port 1000)
+  
+      -- Check that the fake user key was stored
+      ps <- listPeers
+      liftIO $ assertBool "No peers stored after adding peer" $ not $ null ps
+  )
 
-    -- Check that the fake user key was stored
-    ps <- listPeers
-    liftIO $ assertBool "No peers stored" $ not $ null ps
+removePeerTest :: Assertion
+removePeerTest = withTemporaryTestDirectory tempDir
+  ( \_ -> runStorage $ do
+      -- Store fake peer
+      _ <- storePeer (Host "locahost") (Port 1000)
+
+      -- Check that the fake user key can be deleted
+      removePeer 1
+      ps <- listPeers
+      liftIO $ assertBool "Peers are still stored after trying to removing last peer" $ null ps
   )
 
 toFromHashSalt :: TestTree
