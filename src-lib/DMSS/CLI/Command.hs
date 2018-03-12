@@ -11,6 +11,7 @@
 module DMSS.CLI.Command where
 
 import Network (PortNumber)
+import Data.Int (Int64)
 
 -- | High level commands
 data Command = Id IdCommand
@@ -32,4 +33,5 @@ data CheckInCommand = CheckInCreate String  -- ^ Create new checkin
 -- | Peer command
 data PeerCommand = PeerCreate String PortNumber  -- ^ Create new peer
                  | PeerList                      -- ^ List peer
+                 | PeerRemove Int64
   deriving (Show)

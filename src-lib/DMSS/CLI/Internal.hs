@@ -39,6 +39,7 @@ import Database.Esqueleto ( Entity(..)
                           , getBy )
 
 import Data.String.Conv ( toS )
+import Data.Int (Int64)
 import System.Exit (die)
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8  as BS8
@@ -165,7 +166,7 @@ processPeerCreate h p = do
   _ <- runStorage $ storePeer h p
   return True
 
-processPeerList :: IO [(Host,Port)]
+processPeerList :: IO [(Int64,Host,Port)]
 processPeerList = do
   ps <- runStorage  listPeers
-  return $ ((,) <$> peerHost <*> peerPort) <$> ps
+  return $ ((,,) <$> fst <*> peerHost . snd <*> peerPort . snd) <$> ps

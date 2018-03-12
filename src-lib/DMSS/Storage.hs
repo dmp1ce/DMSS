@@ -47,10 +47,12 @@ import           DMSS.Storage.TH
 
 import qualified Crypto.Lithium.Sign as S
 
+import           Database.Persist.Sql (fromSqlKey)
 import qualified Database.Persist.Sqlite as P
 import           Database.Esqueleto
 import           Data.Text ( pack )
 import           Data.Pool (Pool)
+import           Data.Int (Int64)
 import           Data.Time.Clock ( UTCTime, NominalDiffTime
                                  , addUTCTime, getCurrentTime )
 
@@ -164,10 +166,10 @@ storePeer host port = do
   t <- liftIO getCurrentTime
   insert $ Peer host port (UTCTimeStore t)
 
-listPeers :: StorageT [Peer]
+listPeers :: StorageT [(Int64,Peer)]
 listPeers = do
   s <- select $ from return
-  return (entityVal <$> s)
+  return $ ((,) <$> fromSqlKey . entityKey <*> entityVal) <$> s
 
 verifyPublicCheckIn :: Name           -- ^ Users Name
                     -> CheckInProof   -- ^ Public CheckIn

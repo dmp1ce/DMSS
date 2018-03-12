@@ -161,12 +161,14 @@ process (Cli Nothing pn s Version) = do
 
 process (Cli Nothing _ s (Peer PeerList)) = do
   ps <- processPeerList
-  traverse_ (\(Host h, Port p) -> msgLn s $ h ++ ":" ++ show p) ps
+  traverse_ (\(k, Host h, Port p) -> msgLn s $ show k ++ " " ++  h ++ ":" ++ show p) ps
 process (Cli Nothing _ s (Peer (PeerCreate h p))) = do
   r <- processPeerCreate (Host h) (Port p)
   if r
   then msgLn s $ "Created peer " ++ h ++ ":" ++ show p
   else msgLn s $ "Something went wrong creating peer " ++ h ++ ":" ++ show p
+process (Cli Nothing _ s (Peer (PeerRemove _))) =
+  msgLn s $ "PeerRemove command here"
 
 runCommand :: PortNumber -> DCLI.Command -> IO (Maybe String)
 runCommand = runClient "localhost" . fromIntegral
