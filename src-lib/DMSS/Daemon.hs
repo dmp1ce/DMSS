@@ -94,11 +94,11 @@ process cli@(Cli h cp pp s) = do
     liftIO $ runStoragePool pool $ P.runMigrationSilent migrateAll >>= liftIO . mapM_ (putStrLn . unpack)
 
     liftIO $ logMsgLn s "Starting event loop"
-    _ <- liftIO $ forkIO $ runStoragePool pool $ forever $ do
+    _ <- liftIO $ forkIO $ forever $ do
       let ms = 10000
           num_ms = 1000
-      liftIO $ threadDelay (ms * num_ms)
-      eventLoop cli
+      threadDelay (ms * num_ms)
+      runStoragePool pool $ eventLoop cli
 
     liftIO $ logMsgLn s $ "Listening for peers on port " ++ show pp
     sock <- liftIO $ socket AF_INET Stream defaultProtocol
