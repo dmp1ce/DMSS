@@ -18,7 +18,7 @@ import DMSS.Daemon.Command
 import DMSS.Daemon.CLI ( Cli (Cli), daemonMain, FlagSilent (SilentOn) )
 import DMSS.Storage ( StorageT, runStoragePool
                     , latestCheckIns, verifyPublicCheckIn
-                    , unName
+                    , unName, listPeers
                     , dbConnectionString
                     )
 import DMSS.Storage.TH ( migrateAll )
@@ -65,6 +65,10 @@ eventLoop (Cli _ _ _ s) = do
               then logMsgLn s $ unName n ++ " has a valid checkin."
               else logMsgLn s $ unName n ++ " has not checked in recently!"
             ) checkInsValid
+
+  -- Search for peers to connect to
+  peers <- listPeers
+  liftIO $ print peers
 
 peerLoop :: Socket -> IO ()
 peerLoop sock = do
