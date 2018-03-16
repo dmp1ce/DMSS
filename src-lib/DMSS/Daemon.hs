@@ -15,13 +15,15 @@ module DMSS.Daemon where
 
 import DMSS.Config (createLocalDirectory)
 import DMSS.Daemon.Command
+import DMSS.Daemon.Memory (DaemonTVar)
+import DMSS.Daemon.Network (connAttempt, beginConnListen)
 import DMSS.Daemon.CLI ( Cli (Cli), daemonMain, FlagSilent (SilentOn) )
 import DMSS.Storage ( StorageT, runStoragePool
                     , latestCheckIns, verifyPublicCheckIn
                     , unName, listPeers
                     , dbConnectionString
                     )
-import DMSS.Storage.TH ( migrateAll )
+import DMSS.Storage.TH ( migrateAll, Peer (Peer) )
 import Paths_DMSS ( version )
 
 import Control.Concurrent ( forkIO, threadDelay )
@@ -29,16 +31,16 @@ import Control.Monad (forever, foldM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Pipe.C3 ( commandReceiver )
 import Control.Monad.Logger (runStdoutLoggingT)
+import Control.Concurrent.STM.TVar (newTVar, readTVar, modifyTVar)
+import Control.Monad.STM (atomically)
 import Data.Version ( showVersion )
 import Data.Foldable ( traverse_ )
 import Data.Text ( pack, unpack )
 import System.Daemon
 import System.IO.Silently (silence)
 import System.Environment (setEnv)
-import Network.Socket
-  ( socket, Socket, defaultProtocol, bind, iNADDR_ANY, listen, close
-  , Family (AF_INET), SocketType (Stream), SockAddr (SockAddrInet), accept )
 import qualified Database.Persist.Sqlite as P
+import qualified Control.Exception as E
 
 type Response = String
 
@@ -46,8 +48,8 @@ checkerDaemon :: Command -> IO Response
 checkerDaemon Status  = return "Daemon is running!"
 checkerDaemon Version = return $ "Daemon version: " ++ showVersion version
 
-eventLoop :: Cli -> StorageT ()
-eventLoop (Cli _ _ _ s) = do
+eventLoop :: Cli -> DaemonTVar -> StorageT ()
+eventLoop (Cli _ _ _ s) sm = do
   -- Check checkin status of all users
   userCheckIns <- latestCheckIns
   -- Valid checkin if any valid checkin with latestCheckIns timeframe
@@ -66,17 +68,14 @@ eventLoop (Cli _ _ _ s) = do
               else logMsgLn s $ unName n ++ " has not checked in recently!"
             ) checkInsValid
 
-  -- Search for peers to connect to
+  -- TODO: Try to connect to all peers which don't currently have connections
+  --       Create shared variable for holding active connections.
+  currMem <- liftIO $ atomically $ readTVar sm
+  liftIO $ print currMem
+  _ <- liftIO $ atomically $ modifyTVar sm (\(s',i) -> (s',i+1))
+  -- TODO: Exponentially backoff peers that are not responding
   peers <- listPeers
-  liftIO $ print peers
-
-peerLoop :: Socket -> IO ()
-peerLoop sock = do
-  conn <- accept sock
-  -- TODO: Figure out what to do with this connection
-  putStrLn $ "Recieved a connection (" ++ show conn ++ ") ."
-  close sock
-  peerLoop sock
+  liftIO $ traverse_ (\(_,Peer h p _) -> connAttempt h p sm) peers
 
 daemonMain :: IO ()
 daemonMain = DMSS.Daemon.CLI.daemonMain process
@@ -86,6 +85,9 @@ process cli@(Cli h cp pp s) = do
   -- Make sure local directory exists for storing data
   mapM_ (setEnv "HOME") h
   createLocalDirectory
+
+  -- Create shared memory for all threads
+  sm <- atomically $ newTVar ("ShareMemoryHere", 0)
 
   -- Create shared storage pool for all processes
   c <- dbConnectionString
@@ -98,14 +100,12 @@ process cli@(Cli h cp pp s) = do
       let ms = 10000
           num_ms = 1000
       threadDelay (ms * num_ms)
-      runStoragePool pool $ eventLoop cli
+      -- TODO: Try to be better about catching specific errors that could occur
+      err <- E.try $ runStoragePool pool $ eventLoop cli sm :: IO (Either E.SomeException ())
+      either print return err
 
     liftIO $ logMsgLn s $ "Listening for peers on port " ++ show pp
-    sock <- liftIO $ socket AF_INET Stream defaultProtocol
-    --setSockOptions sock ReuseAddr 1
-    liftIO $ bind sock (SockAddrInet pp iNADDR_ANY)
-    liftIO $ listen sock 2
-    _ <- liftIO $ forkIO $ peerLoop sock
+    _ <- liftIO $ forkIO $ beginConnListen sm pp
     return ()
 
   logMsgLn s $ "Listening for CLI commands on port " ++ show cp

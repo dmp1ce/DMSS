@@ -31,6 +31,8 @@ library
                    , DMSS.Daemon.Command
                    , DMSS.Daemon.CLI
                    , DMSS.Daemon.Common
+                   , DMSS.Daemon.Network
+                   , DMSS.Daemon.Memory
                    , DMSS.CLI
                    , DMSS.CLI.Internal
                    , DMSS.CLI.Command
@@ -70,6 +72,7 @@ library
                    , base64-bytestring
                    , network
                    , resource-pool
+                   , stm
 
 executable dmss
   default-language:  Haskell2010
