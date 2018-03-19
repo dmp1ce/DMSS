@@ -15,4 +15,5 @@ packages:
 
 extra-deps:
   - daemons-0.2.1
-resolver: lts-10.3
+
+resolver: lts-10.9
