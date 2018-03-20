@@ -8,7 +8,7 @@
 --
 -- Dead Man Switch System daemon network functions
 --
-{-# LANGUAGE OverloadedStrings #-}
+
 module DMSS.Daemon.Network where
 
 import DMSS.Daemon.Memory (DaemonTVar)

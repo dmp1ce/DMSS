@@ -9,10 +9,6 @@
 -- Dead Man Switch System storage types
 --
 
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 module DMSS.Storage.Types where
 
 import qualified Crypto.Lithium.Password as LP

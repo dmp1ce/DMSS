@@ -1,0 +1,145 @@
+name: DMSS
+version: '0.1.0.0'
+synopsis: Dead Man Switch System
+description: Trigger payloads if switch owner does or doesn't check in
+license: PublicDomain
+author: David Parrish
+maintainer: daveparrish@tutanota.com
+category: Unknown
+stability: alpha (experimental)
+extra-source-files:
+- package.yaml
+- README.md
+- stack.yaml
+
+github: dmp1ce/DMSS
+
+ghc-options:
+- -O2
+- -Wall
+- -Wcompat
+- -Werror
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wredundant-constraints
+
+default-extensions:
+- BangPatterns
+- DeriveFoldable
+- DeriveFunctor
+- DeriveGeneric
+- DeriveLift
+- DeriveTraversable
+- EmptyCase
+- FlexibleContexts
+- FlexibleInstances
+- GeneralizedNewtypeDeriving
+- InstanceSigs
+- KindSignatures
+- LambdaCase
+- MultiParamTypeClasses
+- MultiWayIf
+- NamedFieldPuns
+- OverloadedStrings
+- ScopedTypeVariables
+- StandaloneDeriving
+- TupleSections
+
+dependencies:
+- base
+
+library:
+  source-dirs: src-lib
+  dependencies:
+  - ansi-wl-pprint
+  - base64-bytestring
+  - bytestring
+  - cereal
+  - daemons
+  - data-default
+  - directory
+  - email-validate
+  - esqueleto
+  - lithium
+  - memory
+  - monad-logger
+  - network
+  - optparse-applicative
+  - persistent
+  - persistent-sqlite
+  - persistent-template
+  - pretty
+  - QuickCheck
+  - resource-pool
+  - resourcet
+  - silently
+  - sized-memory
+  - stm
+  - string-conv
+  - text
+  - time
+  - transformers
+
+executables:
+  dmss:
+    source-dirs: src-bin
+    main: dmss.hs
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    dependencies:
+    - DMSS
+  dmssd:
+    source-dirs: src-bin
+    main: dmssd.hs
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    dependencies:
+    - DMSS
+
+tests:
+  DMSS-test:
+    source-dirs: src-test
+    main: Main.hs
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    dependencies:
+    - bytestring
+    - directory >= 1.2.5
+    - DMSS
+    - filepath
+    - lithium
+    - persistent-sqlite
+    - silently
+    - tasty >= 0.11
+    - tasty-hunit >= 0.9
+    - tasty-quickcheck
+    - temporary
+  DMSS-doctest:
+    source-dirs: src-bin
+    main: DMSS-doctest.hs
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    dependencies:
+    - DMSS
+    - doctest >= 0.10
+    - Glob >= 0.7
+    - QuickCheck >= 2.5
+
+benchmarks:
+  DMSS-benchmark:
+    source-dirs: src-bin
+    main: DMSS-benchmark.hs
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    dependencies:
+    - criterion
+    - DMSS
