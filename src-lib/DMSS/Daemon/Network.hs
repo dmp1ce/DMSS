@@ -12,46 +12,70 @@
 module DMSS.Daemon.Network where
 
 import DMSS.Daemon.Memory (DaemonTVar)
-import DMSS.Storage (Port (Port), Host (Host))
+import DMSS.Storage.TH (Peer (Peer))
+import DMSS.Storage (Host (Host), Port (Port))
 import Network.Socket
   ( close, accept, withSocketsDo, defaultHints, addrSocketType, getAddrInfo
   , addrFamily, addrSocketType, addrProtocol, addrAddress, SocketType (Stream), socket
-  , connect, bind, PortNumber, Family (AF_INET)
-  , listen, addrFlags, AddrInfoFlag (AI_PASSIVE), setSocketOption, SocketOption (ReuseAddr) )
+  , connect, bind, PortNumber, Family (AF_INET), Socket, HostAddress, inet_ntoa
+  , listen, addrFlags, AddrInfoFlag (AI_PASSIVE), setSocketOption, SocketOption (ReuseAddr)
+  , inet_addr, isConnected )
 import Network.Socket.ByteString (sendAll, recv)
-import qualified Control.Exception as E
 import qualified Data.ByteString.Char8 as C
-import qualified Data.ByteString as S
-import Control.Monad (forever, void, unless)
-import Control.Concurrent (forkFinally)
+import Control.Monad (forever)
+import Control.Concurrent (forkFinally, ThreadId, threadDelay)
+import Control.Concurrent.STM.TVar ( modifyTVar )
+import Control.Monad.STM ( atomically )
 
-connAttempt :: Host -> DMSS.Storage.Port -> DaemonTVar -> IO ()
-connAttempt (Host h) (Port p) _ = withSocketsDo $ do
+-- | Listing for messages from connection
+connListen :: Socket -> DaemonTVar -> IO ()
+connListen sock sm = do
+  putStrLn $ "Listening for messages on connection " ++ show sock
+  msg <- recv sock 1024
+  if msg == ""
+  then putStrLn $ "Connection " ++ show sock ++ " closed remotely."
+  else do putStr "Received: "
+          C.putStrLn msg
+          connListen sock sm
+
+-- | Add connection to shared memory
+addConn :: Socket -> DaemonTVar -> IO ThreadId
+addConn sock sm = do
+  atomically $ modifyTVar sm ((:) sock)
+  t <- forkFinally (connListen sock sm) (\_ -> close sock)
+  putStrLn $ "Trying to send out a hello message to on connection " ++ show sock
+  threadDelay $ 1000 * 1000
+  sendAll sock "Hello, peer!"
+  return t
+
+-- | Attempt to create a connection with a listening peer
+connAttempt :: (HostAddress, PortNumber) -> DaemonTVar -> IO (Maybe ThreadId)
+connAttempt (h,p) sm = withSocketsDo $ do
   addr <- resolve h p
   print addr
-  E.bracket (open addr) close talk
+  sock <- open addr
+  connected <- isConnected sock
+  if connected
+  then Just <$> addConn sock sm
+  else close sock >> return Nothing
   where
     resolve host port = do
       let hints = defaultHints { addrSocketType = Stream
                                , addrFamily = AF_INET }
-      addr:_ <- getAddrInfo (Just hints) (Just host) (Just $ show port)
+      host' <- inet_ntoa host
+      addr:_ <- getAddrInfo (Just hints) (Just host') (Just $ show port)
       return addr
     open addr = do
       sock <- socket (addrFamily addr) (addrSocketType addr) (addrProtocol addr)
       connect sock $ addrAddress addr
       return sock
-    talk sock = do
-      -- TODO: Figure out what the connecting peer should do with this connection.
-      sendAll sock "Hello, world!"
-      msg <- recv sock 1024
-      putStr "Received: "
-      C.putStrLn msg
 
-beginConnListen :: DaemonTVar -> PortNumber -> IO ()
-beginConnListen _ port = withSocketsDo $ do
+-- | Listen for incoming connections
+incomingConnListen :: DaemonTVar -> PortNumber -> IO ()
+incomingConnListen sm port = withSocketsDo $ do
   addr <- resolve port
-  _ <- E.bracket (open addr) close loop
-  return ()
+  sock <- open addr
+  loop sock
   where
     resolve port' = do
       let hints = defaultHints { addrFlags = [AI_PASSIVE]
@@ -69,10 +93,12 @@ beginConnListen _ port = withSocketsDo $ do
     loop sock = forever $ do
       (conn, peer) <- accept sock
       putStrLn $ "Connection from " ++ show peer
-      void $ forkFinally (talk conn) (\_ -> close conn)
-    talk conn = do
-      -- TODO: Figure out what the listening peer should do with this connection.
-      msg <- recv conn 1024
-      unless (S.null msg) $ do
-        sendAll conn msg
-        talk conn
+      addConn conn sm
+
+-- | Use DNS to lookup Peer's `HostAddress` and also return `PortNumber`
+lookupPeerHostPort :: Peer -> IO (HostAddress,PortNumber)
+lookupPeerHostPort ( Peer (Host h) (Port p) _) = do
+  -- TODO: Determine if the Peer Hostname needs to be looked up
+  -- TODO: Lookup HostAddress
+  h' <- inet_addr h
+  return (h', p)

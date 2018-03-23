@@ -28,7 +28,7 @@ import Database.Persist.Types ( PersistValue (PersistList)
                               )
 import qualified Data.ByteString.Base64 as B64
 import DMSS.Common ( toSeconds, toUTCTime )
-import Network.Socket ( PortNumber )
+import Network.Socket ( PortNumber, HostName )
 import Data.Word ( Word16 )
 
 -- For testing
@@ -38,7 +38,7 @@ import Test.QuickCheck
    )
 
 newtype Name = Name { unName :: String } deriving (Show, PersistField, PersistFieldSql)
-newtype Host = Host String deriving (Show, PersistField, PersistFieldSql)
+newtype Host = Host HostName deriving (Show, PersistField, PersistFieldSql)
 
 newtype Port = Port PortNumber deriving (Show, Eq)
 

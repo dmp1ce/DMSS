@@ -15,23 +15,23 @@ module DMSS.Daemon where
 
 import DMSS.Config (createLocalDirectory)
 import DMSS.Daemon.Command
-import DMSS.Daemon.Memory (DaemonTVar)
-import DMSS.Daemon.Network (connAttempt, beginConnListen)
+import DMSS.Daemon.Memory (DaemonTVar, isPeerConnected, cleanupConnections)
+import DMSS.Daemon.Network (connAttempt, incomingConnListen, lookupPeerHostPort)
 import DMSS.Daemon.CLI ( Cli (Cli), daemonMain, FlagSilent (SilentOn) )
 import DMSS.Storage ( StorageT, runStoragePool
                     , latestCheckIns, verifyPublicCheckIn
                     , unName, listPeers
                     , dbConnectionString
                     )
-import DMSS.Storage.TH ( migrateAll, Peer (Peer) )
+import DMSS.Storage.TH ( migrateAll )
 import Paths_DMSS ( version )
 
 import Control.Concurrent ( forkIO, threadDelay )
-import Control.Monad (forever, foldM)
+import Control.Monad (forever, foldM, unless, void)
 import Control.Monad.IO.Class (liftIO)
 import Control.Pipe.C3 ( commandReceiver )
 import Control.Monad.Logger (runStdoutLoggingT)
-import Control.Concurrent.STM.TVar (newTVar, readTVar, modifyTVar)
+import Control.Concurrent.STM.TVar (newTVar, readTVar)
 import Control.Monad.STM (atomically)
 import Data.Version ( showVersion )
 import Data.Foldable ( traverse_ )
@@ -71,11 +71,17 @@ eventLoop (Cli _ _ _ s) sm = do
   -- TODO: Try to connect to all peers which don't currently have connections
   --       Create shared variable for holding active connections.
   currMem <- liftIO $ atomically $ readTVar sm
-  liftIO $ print currMem
-  _ <- liftIO $ atomically $ modifyTVar sm (\(s',i) -> (s',i+1))
+  liftIO $ do putStrLn "Global memory dump:"; print currMem
   -- TODO: Exponentially backoff peers that are not responding
+  -- TODO: Get resolved HostAddress and PortNumber in order to determine what connections to attempt
   peers <- listPeers
-  liftIO $ traverse_ (\(_,Peer h p _) -> connAttempt h p sm) peers
+  peers' <- liftIO $ traverse (lookupPeerHostPort . snd) peers
+
+  liftIO $ cleanupConnections sm
+  liftIO $ traverse_ (\peer -> do
+                         alreadyConnected <- isPeerConnected sm peer
+                         unless alreadyConnected (void $ connAttempt peer sm)) peers'
+
 
 daemonMain :: IO ()
 daemonMain = DMSS.Daemon.CLI.daemonMain process
@@ -87,7 +93,7 @@ process cli@(Cli h cp pp s) = do
   createLocalDirectory
 
   -- Create shared memory for all threads
-  sm <- atomically $ newTVar ("ShareMemoryHere", 0)
+  sm <- atomically $ newTVar []
 
   -- Create shared storage pool for all processes
   c <- dbConnectionString
@@ -105,7 +111,10 @@ process cli@(Cli h cp pp s) = do
       either print return err
 
     liftIO $ logMsgLn s $ "Listening for peers on port " ++ show pp
-    _ <- liftIO $ forkIO $ beginConnListen sm pp
+    _ <- liftIO $ forkIO $ do
+      -- TODO: Save listening thread if needed
+      _ <- incomingConnListen sm pp
+      return ()
     return ()
 
   logMsgLn s $ "Listening for CLI commands on port " ++ show cp
