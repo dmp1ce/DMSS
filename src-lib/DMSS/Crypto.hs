@@ -8,9 +8,10 @@
 --
 -- Dead Man Switch System crypto functions
 --
---{-# LANGUAGE PartialTypeSignatures #-}
 
+--{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE DataKinds #-}
+
 module DMSS.Crypto where
 
 import DMSS.Storage.Types ( BoxKeypairStore (..)

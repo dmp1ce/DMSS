@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module StorageTest (tests) where
 
 import Data.ByteString.Char8 (pack)

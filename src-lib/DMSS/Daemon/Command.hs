@@ -9,7 +9,6 @@
 -- Dead Man Switch System Daemon command module
 --
 
-{-# LANGUAGE DeriveGeneric #-}
 module DMSS.Daemon.Command where
 
 import Data.Serialize

@@ -9,8 +9,6 @@
 -- Dead Man Switch System daemon module
 --
 
-{-# LANGUAGE OverloadedStrings #-}
-
 module DMSS.Daemon where
 
 import DMSS.Config (createLocalDirectory)
