@@ -15,6 +15,7 @@ import           DMSS.CLI.Command
 import           DMSS.CLI.Internal
 import           DMSS.Storage ( Name (..), Host (Host), Port (Port))
 import           DMSS.Daemon.Common ( cliPort )
+import           DMSS.Config (createLocalDirectory)
 
 import Data.String ( fromString )
 import qualified DMSS.Daemon.Command as DCLI
@@ -122,6 +123,7 @@ process :: Cli -> IO ()
 process (Cli (Just homeStr) p s c) = do
   -- Set home directory
   setEnv "HOME" homeStr
+  createLocalDirectory
   process (Cli Nothing p s c)
 
 process (Cli Nothing p s (Id (IdCreate Nothing e))) = do

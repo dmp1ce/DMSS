@@ -43,10 +43,11 @@ homedirCreated = withTemporaryTestDirectory tempDir
     -- Allow Daemon to start. 1 second delay
     threadDelay (1000 * 1000)
 
-    -- Verify home directory was created
+    -- Verify data directory was created
     pathExists <- doesPathExist newDatadir
     assertBool (newDatadir ++ " directory has been created.") pathExists
 
+    -- Verify database was created
     let sqlFile = newDatadir ++ "/.local/share/dmss/dmss.sqlite"
     dataExists <- doesFileExist sqlFile
     assertBool (sqlFile ++ " database has been created.") dataExists

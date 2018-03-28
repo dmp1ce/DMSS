@@ -4,6 +4,14 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 import DMSS.CLI.Internal
+import DMSS.CLI ( process
+                , Cli (Cli)
+                , FlagSilent (SilentOff)
+                )
+import DMSS.Daemon.Common ( cliPort )
+import DMSS.CLI.Command ( Command (Id)
+                        , IdCommand (IdCreate, IdList))
+import System.Directory (doesPathExist, doesFileExist)
 
 import Common
 
@@ -11,6 +19,7 @@ tests :: [TestTree]
 tests =
   [ testCase "create_user_prompt" createUserTest
   , testCase "remove_user_prompt" removeUserTest
+  , testCase "data directory created if needed" datadirCreated
   ]
 
 tempDir :: FilePath
@@ -48,4 +57,24 @@ removeUserTest = withTemporaryTestDirectory tempDir ( \_ -> do
     -- Simply check that no results are returned
     l' <- processIdList
     length (lines l') @?= 1
+  )
+
+datadirCreated :: Assertion
+datadirCreated = withTemporaryTestDirectory tempDir
+  ( \homedir -> do
+    let newDatadir = homedir ++ "/test"
+
+    -- Simulate a list user command which will tigger data directory creation.
+    process (Cli (Just newDatadir) cliPort SilentOff (Id IdList))
+    -- Verify data directory was created
+    pathExists <- doesPathExist newDatadir
+    assertBool (newDatadir ++ " directory has been created.") pathExists
+
+
+    -- Simulate a create user command which will tigger data database creation.
+    process (Cli (Just newDatadir) cliPort SilentOff (Id (IdCreate (Just "new user") (Just "Password"))))
+    -- Verify database was created
+    let sqlFile = newDatadir ++ "/.local/share/dmss/dmss.sqlite"
+    dataExists <- doesFileExist sqlFile
+    assertBool (sqlFile ++ " database has been created.") dataExists
   )
