@@ -12,11 +12,14 @@ import Common ( withTemporaryTestDirectory )
 import System.Environment (withArgs)
 import Data.List (isPrefixOf)
 import DMSS.Daemon.Common ( cliPort )
+import System.Directory (doesPathExist, doesFileExist)
 
 tests :: [TestTree]
 tests =
-  [ testCase "Daemon startup" daemonStartUp
-  , testCase "Two daemon startup" twoDaemonStartUp]
+  [ testCase "Daemon creates data directory" homedirCreated
+  , testCase "Daemon startup" daemonStartUp
+  , testCase "Two daemon startup" twoDaemonStartUp
+  ]
 
 tempDir :: FilePath
 tempDir = "daemonTest"
@@ -26,6 +29,31 @@ tempDir = "daemonTest"
 --
 -- Using the same port from test to test will cause tests to not be able to
 -- connect.
+
+homedirCreated :: Assertion
+homedirCreated = withTemporaryTestDirectory tempDir
+  ( \homedir -> do
+    -- Start daemon silently
+    let newDatadir = homedir ++ "/test"
+    t <- forkIO $ withArgs [ "-s"
+                           , "--homedir=" ++ newDatadir
+                           , "--cli-port=8006"
+                           , "--peer-port=8007"
+                           ] daemonMain
+    -- Allow Daemon to start. 1 second delay
+    threadDelay (1000 * 1000)
+
+    -- Verify home directory was created
+    pathExists <- doesPathExist newDatadir
+    assertBool (newDatadir ++ " directory has been created.") pathExists
+
+    let sqlFile = newDatadir ++ "/.local/share/dmss/dmss.sqlite"
+    dataExists <- doesFileExist sqlFile
+    assertBool (sqlFile ++ " database has been created.") dataExists
+
+    -- Stop Daemon
+    killThread t
+  )
 
 daemonStartUp :: Assertion
 daemonStartUp = withTemporaryTestDirectory tempDir ( \homedir -> do
