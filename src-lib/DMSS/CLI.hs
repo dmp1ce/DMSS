@@ -15,7 +15,7 @@ import           DMSS.CLI.Command
 import           DMSS.CLI.Internal
 import           DMSS.Storage ( Name (..), Host (Host), Port (Port))
 import           DMSS.Daemon.Common ( cliPort )
-import           DMSS.Config (createLocalDirectory)
+import           DMSS.Config (createLocalDirectory, localDirectory)
 
 import Data.String ( fromString )
 import qualified DMSS.Daemon.Command as DCLI
@@ -25,6 +25,7 @@ import           Data.Monoid ((<>))
 import           Data.Version ( showVersion )
 import           Options.Applicative
 import           System.Daemon ( runClient )
+import           System.Directory (doesPathExist)
 import           System.Environment (setEnv)
 import           Data.Foldable (traverse_)
 import           Control.Monad (when)
@@ -123,6 +124,11 @@ process :: Cli -> IO ()
 process (Cli (Just homeStr) p s c) = do
   -- Set home directory
   setEnv "HOME" homeStr
+  -- Notify user if new directory is about to be created
+  l <- localDirectory
+  doesPathExist l >>= flip when
+    (do msgLn s "Attempting to create missing data directory."
+        msgLn s l)
   createLocalDirectory
   process (Cli Nothing p s c)
 
