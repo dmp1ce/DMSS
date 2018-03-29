@@ -99,6 +99,20 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - DMSS
+  dev:
+    source-dirs: src-bin
+    main: dev.hs
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    dependencies:
+    - turtle
+    - text
+    - process
+    - text-conversions
+    default-extensions:
+    - OverloadedStrings
 
 tests:
   DMSS-test:
