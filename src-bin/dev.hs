@@ -15,12 +15,12 @@ import Data.Version ( showVersion )
 desc :: Description
 desc = Description "Run tests for DMSS. To run all tests just run this script without any arguments."
 
-data UserInput = Test Bool (Maybe Text) | Version Bool deriving Show
+data UserInput = Test Bool (Maybe Text) | Version deriving Show
 
 parser :: Parser UserInput
 parser = Test <$> subcommand "test" "Run tests" (switch "watch" 'w' "Watch for file changes.")
               <*> optional (optText "pattern" 'p' "Run test with this pattern in test title")
-     <|> Version <$> subcommand "version" "Show version" (switch "something" 's' "Yeah")
+     <|> Version <$ subcommand "version" "Show version" empty
 
 stackCommand :: Text
 stackCommand = "stack test --fast --haddock-deps"
@@ -40,7 +40,7 @@ main = do
     Test True  Nothing -> watchTests Nothing
     Test False str     -> runTests str
     Test True  str     -> watchTests str
-    Version _          -> do
+    Version            -> do
       traverse_ echo (textToLine $ convertText $ showVersion version)
       exit ExitSuccess
   where
