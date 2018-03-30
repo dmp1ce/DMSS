@@ -15,12 +15,14 @@ import Data.Version ( showVersion )
 desc :: Description
 desc = Description "Run tests for DMSS. To run all tests just run this script without any arguments."
 
-data UserInput = Test Bool (Maybe Text) | Version deriving Show
+data UserInput = Test Bool (Maybe Text) | Version | Hoogle | Haddock deriving Show
 
 parser :: Parser UserInput
 parser = Test <$> subcommand "test" "Run tests" (switch "watch" 'w' "Watch for file changes.")
               <*> optional (optText "pattern" 'p' "Run test with this pattern in test title")
-     <|> Version <$ subcommand "version" "Show version" empty
+     <|> Hoogle <$ subcommand "hoogle" "Run local Hoogle server on port 8080" (pure ())
+     <|> Haddock <$ subcommand "haddock" "Open Haddock documentation in browser" (pure ())
+     <|> Version <$ subcommand "version" "Show version" (pure ())
 
 stackCommand :: Text
 stackCommand = "stack test --fast --haddock-deps"
@@ -43,6 +45,8 @@ main = do
     Version            -> do
       traverse_ echo (textToLine $ convertText $ showVersion version)
       exit ExitSuccess
+    Hoogle             -> shell' "stack hoogle -- server --local --port=8080"
+    Haddock            -> shell' "stack haddock --open"
   where
     watchTests Nothing  = shell' (format (s%" --file-watch "%s) stackCommand targetsString)
     watchTests (Just p) = shell' (format
